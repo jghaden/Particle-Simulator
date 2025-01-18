@@ -6,6 +6,7 @@
 
 const bool   BOUNDING_BOX = false;
 const int    NUM_PARTICLES = 2'000;
+const int    MAX_NUM_PARTICLES = 3'000;
 const double TIME_STEP = 0.002;
 const double MAX_PARTICLE_COLOR_SPEED = 10.0;
 const double M_PI = 3.1415926536;
@@ -55,6 +56,9 @@ public:
     void addParticles(glm::dvec2 pos);
     void removeParticle(glm::dvec2 pos);
     void removeAllParticles();
+
+    int getParticleCount();
+    int getMaxParticleCount();
 
     int particleBrushSize;
     double newParticleVelocity;
