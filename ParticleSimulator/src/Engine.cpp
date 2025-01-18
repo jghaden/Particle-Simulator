@@ -13,6 +13,25 @@ static bool isCtrlMouseLeftClickPrev = false;
 static bool isClearParticles = false;
 static bool isSimulationPaused = false;
 static bool isFrameStepping = false;
+static bool isShowingUI = true;
+
+FT_Library ft;
+FT_Face face;
+
+GLuint VAO, VBO_positions, VBO_colors;
+GLuint VAO_text, VBO_text;
+
+glm::mat4 projection = glm::ortho(
+    -1.0f, 1.0f,    // Left and right
+    -1.0f, 1.0f,    // Bottom and top
+    0.1f, 100.0f    // Near and far planes
+);
+
+glm::mat4 projectionText = glm::ortho(
+    0.0f, static_cast<GLfloat>(WINDOW_WIDTH),
+    static_cast<GLfloat>(WINDOW_HEIGHT), 
+    0.0f,  // Flip top and bottom
+    -1.0f, 1.0f);
 
 // Initialize GLFW and create a window
 GLFWwindow* Engine::InitOpenGL()
@@ -66,81 +85,82 @@ void Engine::WindowResizeCallback(GLFWwindow* window, int width, int height)
     glViewport(0, 0, width, height);
 }
 
-//int Engine::InitFreeType()
-//{
-//    FT_Library ft;
-//    if (FT_Init_FreeType(&ft))
-//    {
-//        std::cerr << "Could not init FreeType Library" << std::endl;
-//        return -1;
-//    }
-//
-//    // Load a font face
-//    FT_Face face;
-//    if (FT_New_Face(ft, "../data/fonts/Roboto/Roboto-Regular.ttf", 0, &face))
-//    {
-//        std::cerr << "Failed to load font" << std::endl;
-//        return -1;
-//    }
-//    FT_Set_Pixel_Sizes(face, 0, 48);
-//
-//    // Load the first 128 characters of the ASCII set
-//    glPixelStorei(GL_UNPACK_ALIGNMENT, 1); // Disable byte-alignment restriction
-//
-//    for (GLubyte c = 0; c < 128; c++)
-//    {
-//        // Load character glyph
-//        if (FT_Load_Char(face, c, FT_LOAD_RENDER))
-//        {
-//            std::cerr << "Failed to load Glyph" << std::endl;
-//            continue;
-//        }
-//
-//        // Generate texture
-//        GLuint texture;
-//        glGenTextures(1, &texture);
-//        glBindTexture(GL_TEXTURE_2D, texture);
-//        glTexImage2D(
-//            GL_TEXTURE_2D,
-//            0,
-//            GL_RED,
-//            face->glyph->bitmap.width,
-//            face->glyph->bitmap.rows,
-//            0,
-//            GL_RED,
-//            GL_UNSIGNED_BYTE,
-//            face->glyph->bitmap.buffer
-//        );
-//
-//        // Set texture options
-//        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-//        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-//        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-//        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-//
-//        //// Store character for later use
-//        //this->characters.insert(std::pair<GLchar, Character>(c, {
-//        //    texture,
-//        //    glm::ivec2(face->glyph->bitmap.width, face->glyph->bitmap.rows),
-//        //    glm::ivec2(face->glyph->bitmap_left, face->glyph->bitmap_top),
-//        //    face->glyph->advance.x
-//        //}));
-//
-//        // Now store character for later use
-//        Character character = {
-//            texture,
-//            glm::ivec2(face->glyph->bitmap.width, face->glyph->bitmap.rows),
-//            glm::ivec2(face->glyph->bitmap_left, face->glyph->bitmap_top),
-//            static_cast<GLuint>(face->glyph->advance.x)
-//        };
-//        this->characters.insert(std::pair<char, Character>(c, character));
-//    }
-//    glBindTexture(GL_TEXTURE_2D, 0);
-//
-//    // Destroy FreeType resources
-//    FT_Done_Face(face);
-//    FT_Done_FreeType(ft);
-//}
+int GetPixelSizeFromPointSize(float pointSize, float dpi = 96.0f)
+{
+    return static_cast<int>(pointSize * (dpi / 72.0f));
+}
+
+float normalizedHeight;
+
+int Engine::InitFreeType()
+{   
+    if (FT_Init_FreeType(&ft))
+    {
+        std::cerr << "Could not init FreeType Library" << std::endl;
+        return -1;
+    }
+
+    // Load a font face
+    if (FT_New_Face(ft, "../data/fonts/Roboto/Roboto-Regular.ttf", 0, &face))
+    {
+        std::cerr << "Failed to load font" << std::endl;
+        return -1;
+    }
+
+    float pointSize = 64.0f; // Desired font size in points
+    int pixelHeight = GetPixelSizeFromPointSize(pointSize, 96.0f);
+    FT_Set_Pixel_Sizes(face, 0, pixelHeight);
+
+    normalizedHeight = face->size->metrics.height / 64.0f; // Convert to float
+
+    // Load the first 128 characters of the ASCII set
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1); // Disable byte-alignment restriction
+
+    for (GLubyte c = 0; c < 128; c++)
+    {
+        // Load character glyph
+        if (FT_Load_Char(face, c, FT_LOAD_RENDER))
+        {
+            std::cerr << "Failed to load Glyph" << std::endl;
+            continue;
+        }
+
+        // Generate texture
+        GLuint texture;
+        glGenTextures(1, &texture);
+        glBindTexture(GL_TEXTURE_2D, texture);
+        glTexImage2D(
+            GL_TEXTURE_2D,
+            0,
+            GL_RED,
+            face->glyph->bitmap.width,
+            face->glyph->bitmap.rows,
+            0,
+            GL_RED,
+            GL_UNSIGNED_BYTE,
+            face->glyph->bitmap.buffer
+        );
+
+        // Set texture options
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        //// Store character for later use
+        this->characters.insert(std::pair<GLchar, Character>(c, {
+            texture,
+            glm::ivec2(face->glyph->bitmap.width, face->glyph->bitmap.rows),
+            glm::ivec2(face->glyph->bitmap_left, face->glyph->bitmap_top),
+            static_cast<GLuint>(face->glyph->advance.x >> 6)
+        }));
+    }
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    // Destroy FreeType resources
+    FT_Done_Face(face);
+    FT_Done_FreeType(ft);
+}
 
 // Helper function to read shader source code from a file
 std::string Engine::ReadShaderFile(const char* filePath)
@@ -223,6 +243,19 @@ GLuint Engine::LoadShaders(const char* vertex_file_path, const char* fragment_fi
     return shaderProgram;
 }
 
+std::map<std::string, GLuint> shaders;
+
+void Engine::LoadAllShaders()
+{
+    shaders["particle"] = LoadShaders("../data/shaders/particle.vs", "../data/shaders/particle.fs");
+    shaders["text"]= LoadShaders("../data/shaders/text.vs", "../data/shaders/text.fs");
+}
+
+GLuint Engine::GetShader(const std::string& key)
+{
+    return shaders[key];
+}
+
 void Engine::SetupBuffers(GLuint& VAO, GLuint& VBO_positions, GLuint& VBO_colors, const std::vector<Particle>* particles)
 {
     std::vector<GLfloat> positions;
@@ -248,10 +281,6 @@ void Engine::SetupBuffers(GLuint& VAO, GLuint& VBO_positions, GLuint& VBO_colors
     glBindBuffer(GL_ARRAY_BUFFER, VBO_colors);
     glBufferData(GL_ARRAY_BUFFER, colors.size() * sizeof(GLfloat), colors.data(), GL_DYNAMIC_DRAW);
 
-    /*glGenBuffers(1, &VBO_ages);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO_ages);
-    glBufferData(GL_ARRAY_BUFFER, ages.size() * sizeof(GLfloat), ages.data(), GL_DYNAMIC_DRAW);*/
-
     glEnableVertexAttribArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, VBO_positions);
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
@@ -260,14 +289,29 @@ void Engine::SetupBuffers(GLuint& VAO, GLuint& VBO_positions, GLuint& VBO_colors
     glBindBuffer(GL_ARRAY_BUFFER, VBO_colors);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
 
-    /*glEnableVertexAttribArray(2);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO_ages);
-    glVertexAttribPointer(2, 1, GL_FLOAT, GL_FALSE, 0, nullptr);*/
-
-    glEnable(GL_CULL_FACE);
     glEnable(GL_BLEND);
+    glDisable(GL_CULL_FACE);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
+
+void Engine::SetupTextBuffers(GLuint& VAO, GLuint& VBO_positions)
+{
+    glGenVertexArrays(1, &VAO);
+    glBindVertexArray(VAO);
+
+    glGenBuffers(1, &VBO_positions);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO_positions);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 6 * 4, nullptr, GL_DYNAMIC_DRAW); // 6 vertices, 4 attributes (x, y, u, v)
+
+    // Position and texture coordinates
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (void*)0); // Position (x, y)
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (void*)(2 * sizeof(GLfloat))); // Texture coords (u, v)
+    glEnableVertexAttribArray(1);
+
+    glBindVertexArray(0);
+}
+
 
 void Engine::RenderParticles(GLuint VAO, size_t particleCount)
 {
@@ -275,49 +319,75 @@ void Engine::RenderParticles(GLuint VAO, size_t particleCount)
     glDrawArrays(GL_POINTS, 0, particleCount);
 }
 
-//void Engine::RenderText(Shader &shader, std::string text, GLfloat x, GLfloat y, GLfloat scale, glm::vec3 color)
-//{
-//    // Activate corresponding render state	
-//    shader.use();
-//    glUniform3f(glGetUniformLocation(shader.ID, "textColor"), color.x, color.y, color.z);
-//    glActiveTexture(GL_TEXTURE0);
-//    glBindVertexArray(VAO);
-//
-//    // Iterate through all characters
-//    std::string::const_iterator c;
-//    for (c = text.begin(); c != text.end(); c++)
-//    {
-//        Character ch = this->characters[*c];
-//
-//        GLfloat xpos = x + ch.Bearing.x * scale;
-//        GLfloat ypos = y - (ch.Size.y - ch.Bearing.y) * scale;
-//
-//        GLfloat w = ch.Size.x * scale;
-//        GLfloat h = ch.Size.y * scale;
-//        // Update VBO for each character
-//        GLfloat vertices[6][4] = {
-//            { xpos,     ypos + h,   0.0, 0.0 },
-//            { xpos,     ypos,       0.0, 1.0 },
-//            { xpos + w, ypos,       1.0, 1.0 },
-//
-//            { xpos,     ypos + h,   0.0, 0.0 },
-//            { xpos + w, ypos,       1.0, 1.0 },
-//            { xpos + w, ypos + h,   1.0, 0.0 }
-//        };
-//        // Render glyph texture over quad
-//        glBindTexture(GL_TEXTURE_2D, ch.TextureID);
-//        // Update content of VBO memory
-//        glBindBuffer(GL_ARRAY_BUFFER, VBO);
-//        glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
-//        glBindBuffer(GL_ARRAY_BUFFER, 0);
-//        // Render quad
-//        glDrawArrays(GL_TRIANGLES, 0, 6);
-//        // Now advance cursors for next glyph (note that advance is number of 1/64 pixels)
-//        x += (ch.Advance >> 6) * scale; // Bitshift by 6 to get value in pixels (2^6 = 64)
-//    }
-//    glBindVertexArray(0);
-//    glBindTexture(GL_TEXTURE_2D, 0);
-//}
+void Engine::RenderText(std::string text, GLfloat x, GLfloat y, GLfloat pointSize, glm::vec3 color)
+{
+    GLuint shaderProgram = GetShader("text");
+    glUseProgram(shaderProgram);
+
+    // Set the text color
+    GLint textColorLocation = glGetUniformLocation(shaderProgram, "textColor");
+    glUniform3f(textColorLocation, color.x, color.y, color.z);
+
+    // Set the projection matrix
+    GLint projLoc = glGetUniformLocation(shaderProgram, "projection");
+    glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projectionText));
+
+    GLint zoomLoc = glGetUniformLocation(shaderProgram, "zoom");
+    glUniform1f(zoomLoc, 1.0f);
+
+    glBindVertexArray(VAO_text);
+
+    float scaleFactor = pointSize / normalizedHeight;
+
+    // Determine the baseline offset (largest Bearing.y in the text)
+    GLfloat baselineOffset = 0.0f;
+    for (const char& c : text)
+    {
+        Character ch = this->characters[c];
+        baselineOffset = std::max(baselineOffset, (GLfloat)ch.Bearing.y);
+    }
+
+    // Iterate through all characters
+    for (const char& c : text)
+    {
+        Character ch = this->characters[c];
+
+        // Adjust position for the glyph relative to the baseline
+        GLfloat xpos = x + ch.Bearing.x * scaleFactor;
+        GLfloat ypos = y + (baselineOffset - ch.Bearing.y) * scaleFactor;
+
+        GLfloat w = ch.Size.x * scaleFactor;
+        GLfloat h = ch.Size.y * scaleFactor;
+
+        GLfloat vertices[6][4] = {
+            { xpos,     ypos + h,   0.0f, 1.0f }, // Bottom-left
+            { xpos,     ypos,       0.0f, 0.0f }, // Top-left
+            { xpos + w, ypos,       1.0f, 0.0f }, // Top-right
+
+            { xpos,     ypos + h,   0.0f, 1.0f }, // Bottom-left
+            { xpos + w, ypos,       1.0f, 0.0f }, // Top-right
+            { xpos + w, ypos + h,   1.0f, 1.0f }  // Bottom-right
+        };
+
+        // Bind the glyph texture
+        glBindTexture(GL_TEXTURE_2D, ch.TextureID);
+
+        // Update content of VBO memory
+        glBindBuffer(GL_ARRAY_BUFFER, VBO_text);
+        glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
+
+        // Render the quad
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+
+        // Advance to the next character
+        x += ch.Advance * scaleFactor;
+    }
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+    glBindTexture(GL_TEXTURE_2D, 0);
+}
+
 
 int cursor_state = -1;
 int cursor_state_prev = -1;
@@ -421,7 +491,7 @@ void Engine::KeyboardCallback(GLFWwindow* window, int key, int scancode, int act
                     case GLFW_KEY_6: massExp = (isKeyLeftCtrlPressed) ? 16 : 6; break;
                     case GLFW_KEY_7: massExp = (isKeyLeftCtrlPressed) ? 17 : 7; break;
                     case GLFW_KEY_8: massExp = (isKeyLeftCtrlPressed) ? 18 : 8; break;
-                    case GLFW_KEY_9: massExp = (isKeyLeftCtrlPressed) ? 19 : 9; break;
+                    case GLFW_KEY_9: massExp = (isKeyLeftCtrlPressed) ? 19 : 9; break;                    
 
                     case GLFW_KEY_F: isFrameStepping = true; isSimulationPaused = true; e->simulation->updateParticles(); break;
                     case GLFW_KEY_R: isClearParticles = true; break;
@@ -430,6 +500,8 @@ void Engine::KeyboardCallback(GLFWwindow* window, int key, int scancode, int act
 
                     case GLFW_KEY_LEFT_BRACKET: e->simulation->particleBrushSize -= 10; break;
                     case GLFW_KEY_RIGHT_BRACKET: e->simulation->particleBrushSize += 10; break;
+
+                    case GLFW_KEY_F1: isShowingUI = !isShowingUI; break;
 
                     case GLFW_KEY_ESCAPE: break;
                     case GLFW_KEY_LEFT_CONTROL: isKeyLeftCtrlPressed = true; break;
@@ -464,7 +536,7 @@ int Engine::Init()
     GLFWwindow* window = InitOpenGL();
     if (!window) return -1;
 
-    //if (InitFreeType() != 0) return -1;
+    if (InitFreeType() != 0) return -1;
 
     glfwSetWindowUserPointer(window, this);
     glfwSetWindowSizeCallback(window, WindowResizeCallback);
@@ -474,16 +546,19 @@ int Engine::Init()
     glfwSetScrollCallback(window, MouseScrollCallback);
     glfwSetKeyCallback(window, KeyboardCallback);
 
-    GLuint shaderProgram = LoadShaders("../data/shaders/particle.vs", "../data/shaders/particle.fs");
+    LoadAllShaders();
+
+    GLuint shaderParticle = GetShader("particle");
+    GLuint shaderText = GetShader("text");
 
     std::vector<Particle> particles;
     this->simulation->SetParticles(&particles);
     this->simulation->initializeParticles();
-
-    GLuint VAO, VBO_positions, VBO_colors;
+    
     SetupBuffers(VAO, VBO_positions, VBO_colors, &particles);
+    SetupTextBuffers(VAO_text, VBO_text);
 
-    glUseProgram(shaderProgram);
+    glUseProgram(shaderParticle);
 
     glm::mat4 model = glm::mat4(1.0f);
 
@@ -495,18 +570,12 @@ int Engine::Init()
 
     float zoom = 1.f;
 
-    glm::mat4 projection = glm::ortho(
-        -1.0f / zoom, 1.0f / zoom, // Left and right
-        -1.0f / zoom, 1.0f / zoom, // Bottom and top
-        0.1f, 100.0f   // Near and far planes
-    );
-
     glm::mat4 mvp = projection * view * model;
 
-    GLint mvpLoc = glGetUniformLocation(shaderProgram, "MVP");
+    GLint mvpLoc = glGetUniformLocation(shaderParticle, "MVP");
     glUniformMatrix4fv(mvpLoc, 1, GL_FALSE, glm::value_ptr(mvp));
 
-    GLint zoomLoc = glGetUniformLocation(shaderProgram, "zoom");
+    GLint zoomLoc = glGetUniformLocation(shaderParticle, "zoom");
     glUniform1f(zoomLoc, zoom);
 
     while (!glfwWindowShouldClose(window))
@@ -565,9 +634,24 @@ int Engine::Init()
         glBindBuffer(GL_ARRAY_BUFFER, VBO_colors);
         glBufferSubData(GL_ARRAY_BUFFER, 0, colors.size() * sizeof(GLfloat), colors.data());
 
+        // Clear screen
         glClear(GL_COLOR_BUFFER_BIT);
+        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 
+        // Render particles
+        glDisable(GL_BLEND);
+        glUseProgram(shaderParticle);
         RenderParticles(VAO, particles.size());
+
+        // Render text
+        if (isShowingUI)
+        {
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+            std::string s = "Particles: " + std::to_string(positions.size());
+            RenderText(s, 10.0f, 10.0f, 24.0f, glm::vec3(1.0f));
+        }
 
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -576,7 +660,8 @@ int Engine::Init()
     glDeleteBuffers(1, &VBO_positions);
     glDeleteBuffers(1, &VBO_colors);
     glDeleteVertexArrays(1, &VAO);
-    glDeleteProgram(shaderProgram);
+    glDeleteProgram(shaderParticle);
+    glDeleteProgram(shaderText);
 
     glfwDestroyWindow(window);
     glfwTerminate();
