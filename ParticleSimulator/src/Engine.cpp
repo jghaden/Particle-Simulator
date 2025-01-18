@@ -160,6 +160,8 @@ int Engine::InitFreeType()
     // Destroy FreeType resources
     FT_Done_Face(face);
     FT_Done_FreeType(ft);
+
+    return 0;
 }
 
 // Helper function to read shader source code from a file
@@ -295,6 +297,27 @@ void Engine::SetupTextBuffers(GLuint& VAO, GLuint& VBO_positions)
     glEnableVertexAttribArray(1);
 
     glBindVertexArray(0);
+}
+
+void Engine::UpdateParticleBuffers(const std::vector<Particle>& particles)
+{
+    std::vector<GLfloat> positions;
+    std::vector<GLfloat> colors;
+
+    for (const auto& p : particles)
+    {
+        positions.push_back(static_cast<GLfloat>(p.position.x));
+        positions.push_back(static_cast<GLfloat>(p.position.y));
+        colors.push_back(p.color.r);
+        colors.push_back(p.color.g);
+        colors.push_back(p.color.b);
+    }
+
+    glBindBuffer(GL_ARRAY_BUFFER, VBO_positions);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, positions.size() * sizeof(GLfloat), positions.data());
+
+    glBindBuffer(GL_ARRAY_BUFFER, VBO_colors);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, colors.size() * sizeof(GLfloat), colors.data());
 }
 
 void Engine::RenderParticles(GLuint VAO, size_t particleCount)
@@ -597,23 +620,7 @@ int Engine::Init()
             this->simulation->updateParticles();
         }
 
-        // Update VBOs
-        std::vector<GLfloat> positions;
-        std::vector<GLfloat> colors;
-        for (const auto& p : particles)
-        {
-            positions.push_back(static_cast<GLfloat>(p.position.x));
-            positions.push_back(static_cast<GLfloat>(p.position.y));
-            colors.push_back(p.color.r);
-            colors.push_back(p.color.g);
-            colors.push_back(p.color.b);
-        }
-
-        glBindBuffer(GL_ARRAY_BUFFER, VBO_positions);
-        glBufferSubData(GL_ARRAY_BUFFER, 0, positions.size() * sizeof(GLfloat), positions.data());
-
-        glBindBuffer(GL_ARRAY_BUFFER, VBO_colors);
-        glBufferSubData(GL_ARRAY_BUFFER, 0, colors.size() * sizeof(GLfloat), colors.data());
+        UpdateParticleBuffers(particles);
 
         // Clear screen
         glClear(GL_COLOR_BUFFER_BIT);
