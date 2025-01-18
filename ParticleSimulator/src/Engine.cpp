@@ -4,6 +4,16 @@
 #include "Simulation.hpp"
 #include "Particle.hpp"
 
+static bool isKeyLeftAltPressed = false;
+static bool isKeyLeftCtrlPressed = false;
+static bool isKeyLeftShiftPressed = false;
+static bool isCtrlMouseLeftClick = false;
+static bool isCtrlMouseLeftClickPrev = false;
+
+static bool isClearParticles = false;
+static bool isSimulationPaused = false;
+static bool isFrameStepping = false;
+
 // Initialize GLFW and create a window
 GLFWwindow* Engine::InitOpenGL()
 {
@@ -310,6 +320,7 @@ void Engine::RenderParticles(GLuint VAO, size_t particleCount)
 //}
 
 int cursor_state = -1;
+int cursor_state_prev = -1;
 int cursor_window_xpos = -1;
 int cursor_window_ypos = -1;
 
@@ -318,18 +329,29 @@ void Engine::MousePositionCallback(GLFWwindow* window, double xpos, double ypos)
     cursor_window_xpos = xpos;
     cursor_window_ypos = ypos;
 
-    //std::cout << '(' << xpos << ", " << ypos << ')' << std::endl;
+    //printf("Cursor: [%.1lf, %.1lf]\r\n", xpos, ypos);
 }
 
 void Engine::MouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
 {
     switch (action)
     {
+        case GLFW_RELEASE:
+            switch (button)
+            {
+                case GLFW_MOUSE_BUTTON_LEFT:
+                    isCtrlMouseLeftClick = false;
+                default:
+                    cursor_state = -1;
+                    break;
+            }
+            break;
         case GLFW_PRESS:
             switch (button)
             {
                 case GLFW_MOUSE_BUTTON_LEFT:
                     cursor_state = GLFW_MOUSE_BUTTON_LEFT;
+                    isCtrlMouseLeftClick = isKeyLeftCtrlPressed ? true : false;
                     break;
                 case GLFW_MOUSE_BUTTON_RIGHT:
                     cursor_state = GLFW_MOUSE_BUTTON_RIGHT;
@@ -338,7 +360,10 @@ void Engine::MouseButtonCallback(GLFWwindow* window, int button, int action, int
             break;
         default:
             cursor_state = -1;
+            break;
     }
+
+    cursor_state_prev = cursor_state;
 }
 
 void Engine::MouseScrollCallback(GLFWwindow* window, double xoffset, double yoffset)
@@ -355,9 +380,11 @@ void Engine::MouseScrollCallback(GLFWwindow* window, double xoffset, double yoff
             e->simulation->particleBrushSize--;
         }
 
-        std::cout << "Brush size: " << e->simulation->particleBrushSize << std::endl;
+        printf("Brush size: %d\r\n", e->simulation->particleBrushSize);
     }
 }
+
+float massExp = 8;
 
 void Engine::KeyboardCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
@@ -365,31 +392,64 @@ void Engine::KeyboardCallback(GLFWwindow* window, int key, int scancode, int act
 
     if (e)
     {
-        float massExp = 0;
-
         switch (action)
         {
+            case GLFW_RELEASE:
+                switch (key)
+                {
+                    case GLFW_KEY_LEFT_CONTROL: isKeyLeftCtrlPressed = false; break;
+                }
+                break;
             case GLFW_PRESS:
                 switch (key)
                 {
-                    case GLFW_KEY_W: e->simulation->newParticleVelocity += 1.0; break;
-                    case GLFW_KEY_S: e->simulation->newParticleVelocity -= 1.0; break;
+                    
+                    case GLFW_KEY_SPACE:
+                    {
+                        printf("Simulation %s\r\n", !isSimulationPaused ? "paused" : "resumed");
+                        isSimulationPaused = !isSimulationPaused;
+                        isFrameStepping = false;
+                        break;
+                    }
 
-                    case GLFW_KEY_0: massExp = 0; break;
-                    case GLFW_KEY_1: massExp = 1; break;
-                    case GLFW_KEY_2: massExp = 2; break;
-                    case GLFW_KEY_3: massExp = 3; break;
-                    case GLFW_KEY_4: massExp = 4; break;
-                    case GLFW_KEY_5: massExp = 5; break;
-                    case GLFW_KEY_6: massExp = 6; break;
-                    case GLFW_KEY_7: massExp = 7; break;
-                    case GLFW_KEY_8: massExp = 8; break;
-                    case GLFW_KEY_9: massExp = 9; break;
+                    case GLFW_KEY_0: massExp = (isKeyLeftCtrlPressed) ? 10 : 0; break;
+                    case GLFW_KEY_1: massExp = (isKeyLeftCtrlPressed) ? 11 : 1; break;
+                    case GLFW_KEY_2: massExp = (isKeyLeftCtrlPressed) ? 12 : 2; break;
+                    case GLFW_KEY_3: massExp = (isKeyLeftCtrlPressed) ? 13 : 3; break;
+                    case GLFW_KEY_4: massExp = (isKeyLeftCtrlPressed) ? 14 : 4; break;
+                    case GLFW_KEY_5: massExp = (isKeyLeftCtrlPressed) ? 15 : 5; break;
+                    case GLFW_KEY_6: massExp = (isKeyLeftCtrlPressed) ? 16 : 6; break;
+                    case GLFW_KEY_7: massExp = (isKeyLeftCtrlPressed) ? 17 : 7; break;
+                    case GLFW_KEY_8: massExp = (isKeyLeftCtrlPressed) ? 18 : 8; break;
+                    case GLFW_KEY_9: massExp = (isKeyLeftCtrlPressed) ? 19 : 9; break;
+
+                    case GLFW_KEY_F: isFrameStepping = true; isSimulationPaused = true; e->simulation->updateParticles(); break;
+                    case GLFW_KEY_R: isClearParticles = true; break;
+                    case GLFW_KEY_S: e->simulation->newParticleVelocity -= (isKeyLeftCtrlPressed) ? 10 : 1.0; break;
+                    case GLFW_KEY_W: e->simulation->newParticleVelocity += (isKeyLeftCtrlPressed) ? 10 : 1.0; break;
+
+                    case GLFW_KEY_LEFT_BRACKET: e->simulation->particleBrushSize -= 10; break;
+                    case GLFW_KEY_RIGHT_BRACKET: e->simulation->particleBrushSize += 10; break;
+
+                    case GLFW_KEY_ESCAPE: break;
+                    case GLFW_KEY_LEFT_CONTROL: isKeyLeftCtrlPressed = true; break;
+
+                    case GLFW_KEY_KP_0: massExp = (isKeyLeftCtrlPressed) ? 30 : 20; break;
+                    case GLFW_KEY_KP_1: massExp = (isKeyLeftCtrlPressed) ? 31 : 21; break;
+                    case GLFW_KEY_KP_2: massExp = (isKeyLeftCtrlPressed) ? 32 : 22; break;
+                    case GLFW_KEY_KP_3: massExp = (isKeyLeftCtrlPressed) ? 33 : 23; break;
+                    case GLFW_KEY_KP_4: massExp = (isKeyLeftCtrlPressed) ? 34 : 24; break;
+                    case GLFW_KEY_KP_5: massExp = (isKeyLeftCtrlPressed) ? 35 : 25; break;
+                    case GLFW_KEY_KP_6: massExp = (isKeyLeftCtrlPressed) ? 36 : 26; break;
+                    case GLFW_KEY_KP_7: massExp = (isKeyLeftCtrlPressed) ? 37 : 27; break;
+                    case GLFW_KEY_KP_8: massExp = (isKeyLeftCtrlPressed) ? 38 : 28; break;
+                    case GLFW_KEY_KP_9: massExp = (isKeyLeftCtrlPressed) ? 39 : 29; break;
                 }
 
-                e->simulation->newParticleMass = powf(10, massExp);
+                e->simulation->newParticleMass = powl(10, massExp);
 
-                std::cout << "Mass: " << e->simulation->newParticleMass << ", Velocity: " << e->simulation->newParticleVelocity << std::endl;
+                printf("Particle [mass: %.1e, velocity: %.2lf]\r\n", e->simulation->newParticleMass, e->simulation->newParticleVelocity);
+                break;
         }
     }
 }
@@ -452,19 +512,40 @@ int Engine::Init()
     while (!glfwWindowShouldClose(window))
     {
         if (cursor_state == GLFW_MOUSE_BUTTON_LEFT)
-        {
-            this->simulation->addParticles(particles, glm::vec2(cursor_window_xpos, cursor_window_ypos));
-            SetupBuffers(VAO, VBO_positions, VBO_colors, &particles);
+        {            
+            if (isCtrlMouseLeftClick)
+            {
+                if (!isCtrlMouseLeftClickPrev)
+                {
+                    this->simulation->addParticle(glm::vec2(cursor_window_xpos , cursor_window_ypos));
+                    SetupBuffers(VAO, VBO_positions, VBO_colors, &particles);
+                }
+            }
+            else
+            {
+                this->simulation->addParticles(glm::vec2(cursor_window_xpos, cursor_window_ypos));
+                SetupBuffers(VAO, VBO_positions, VBO_colors, &particles);
+            }
         }
         else if (cursor_state == GLFW_MOUSE_BUTTON_RIGHT)
         {
-            this->simulation->removeParticle(particles, glm::vec2(cursor_window_xpos, cursor_window_ypos));
+            this->simulation->removeParticle(glm::vec2(cursor_window_xpos, cursor_window_ypos));
             SetupBuffers(VAO, VBO_positions, VBO_colors, &particles);
         }
 
-        /*this->simulation->update();
-        std::cout << "Simulation time: " << this->simulation->simulationTime << std::endl*/;
-        this->simulation->updateParticles(particles);
+        isCtrlMouseLeftClickPrev = isCtrlMouseLeftClick;
+
+        if (isClearParticles)
+        {
+            isClearParticles = false;
+
+            this->simulation->removeAllParticles();
+        }
+
+        if (!isSimulationPaused)
+        {
+            this->simulation->updateParticles();
+        }
 
         // Update VBOs
         std::vector<GLfloat> positions;
