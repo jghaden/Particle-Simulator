@@ -29,7 +29,7 @@ glm::vec3 Particle::interpolateColor(float t, const std::vector<std::pair<float,
 void Particle::updateColor()
 {
     double speed = glm::length(this->velocity);
-    double t = glm::clamp(speed / MAX_PARTICLE_COLOR_SPEED, 0.0, 1.0);
+    float t = static_cast<float>(glm::clamp(speed / MAX_PARTICLE_COLOR_SPEED, 0.0, 1.0));
 
     // Define the color stops
     std::vector<std::pair<float, glm::vec3>> colorStops = {
@@ -72,7 +72,7 @@ glm::vec3 interpolateColor(float t, const std::vector<std::pair<float, glm::vec3
 glm::vec3 calculateColor(const glm::dvec2& velocity)
 {
     double speed = glm::length(velocity);
-    float t = glm::clamp(speed / MAX_PARTICLE_COLOR_SPEED, 0.0, 1.0);
+    float t = static_cast<float>(glm::clamp(speed / MAX_PARTICLE_COLOR_SPEED, 0.0, 1.0));
 
     // Define the color stops
     std::vector<std::pair<float, glm::vec3>> colorStops = {

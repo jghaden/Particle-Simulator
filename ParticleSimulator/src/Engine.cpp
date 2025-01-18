@@ -300,7 +300,7 @@ void Engine::SetupTextBuffers(GLuint& VAO, GLuint& VBO_positions)
 void Engine::RenderParticles(GLuint VAO, size_t particleCount)
 {
     glBindVertexArray(VAO);
-    glDrawArrays(GL_POINTS, 0, particleCount);
+    glDrawArrays(GL_POINTS, 0, (GLsizei)particleCount);
 }
 
 void Engine::RenderText(std::string text, GLfloat x, GLfloat y, GLfloat pointSize, glm::vec3 color)
@@ -375,8 +375,8 @@ void Engine::RenderText(std::string text, GLfloat x, GLfloat y, GLfloat pointSiz
 
 int cursor_state = -1;
 int cursor_state_prev = -1;
-int cursor_window_xpos = -1;
-int cursor_window_ypos = -1;
+double cursor_window_xpos = -1;
+double cursor_window_ypos = -1;
 
 void Engine::MousePositionCallback(GLFWwindow* window, double xpos, double ypos)
 {
@@ -438,7 +438,7 @@ void Engine::MouseScrollCallback(GLFWwindow* window, double xoffset, double yoff
     }
 }
 
-float massExp = 8;
+int massExp = 8;
 
 void Engine::KeyboardCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
@@ -602,8 +602,8 @@ int Engine::Init()
         std::vector<GLfloat> colors;
         for (const auto& p : particles)
         {
-            positions.push_back(p.position.x);
-            positions.push_back(p.position.y);
+            positions.push_back(static_cast<GLfloat>(p.position.x));
+            positions.push_back(static_cast<GLfloat>(p.position.y));
             colors.push_back(p.color.r);
             colors.push_back(p.color.g);
             colors.push_back(p.color.b);

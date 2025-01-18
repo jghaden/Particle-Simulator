@@ -270,12 +270,12 @@ void Simulation::removeAllParticles()
     this->particles->clear();
 }
 
-int Simulation::getParticleCount()
+size_t Simulation::getParticleCount()
 {
     return this->particles->size();
 }
 
-int Simulation::getMaxParticleCount()
+size_t Simulation::getMaxParticleCount()
 {
     return MAX_NUM_PARTICLES;
 }

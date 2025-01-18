@@ -10,7 +10,7 @@ const int    MAX_NUM_PARTICLES = 3'000;
 const double TIME_STEP = 0.002;
 const double MAX_PARTICLE_COLOR_SPEED = 10.0;
 const double M_PI = 3.1415926536;
-const float  GRAVITATIONAL_CONSTANT = 6.6743e-11;
+const double GRAVITATIONAL_CONSTANT = 6.6743e-11;
 const double MIN_DISTANCE = 2.0;                    // Minimum distance to prevent collapse
 const double SOFTENING = 1.0;                       // Softening factor to prevent extreme forces
 const double DAMPING = 1.0;                         // Velocity damping factor
@@ -57,8 +57,8 @@ public:
     void removeParticle(glm::dvec2 pos);
     void removeAllParticles();
 
-    int getParticleCount();
-    int getMaxParticleCount();
+    size_t getParticleCount();
+    size_t getMaxParticleCount();
 
     int particleBrushSize;
     double newParticleVelocity;
