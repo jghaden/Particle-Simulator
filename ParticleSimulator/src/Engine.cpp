@@ -540,7 +540,7 @@ void Engine::SetSimulation(Simulation* simulation)
 
 int Engine::Init()
 {
-    GLFWwindow* window = InitOpenGL();
+    window = InitOpenGL();
     if (!window) return -1;
 
     if (InitFreeType() != 0) return -1;
@@ -558,10 +558,6 @@ int Engine::Init()
     GLuint shaderParticle = GetShader("particle");
     GLuint shaderText = GetShader("text");
 
-    std::vector<Particle> particles;
-    this->simulation->SetParticles(&particles);
-    this->simulation->initializeParticles();
-    
     SetupParticleBuffers(VAO, VBO_positions, VBO_colors, this->simulation->getMaxParticleCount());
     SetupTextBuffers(VAO_text, VBO_text);
 
@@ -585,10 +581,31 @@ int Engine::Init()
     GLint zoomLoc = glGetUniformLocation(shaderParticle, "zoom");
     glUniform1f(zoomLoc, zoom);
 
+    this->Run();
+
+    glDeleteBuffers(1, &VBO_positions);
+    glDeleteBuffers(1, &VBO_colors);
+    glDeleteVertexArrays(1, &VAO);
+    glDeleteProgram(shaderParticle);
+    glDeleteProgram(shaderText);
+
+    glfwDestroyWindow(window);
+    glfwTerminate();
+    return 0;
+}
+
+void Engine::Run()
+{
+    GLuint shaderParticle = GetShader("particle");
+
+    std::vector<Particle> particles;
+    this->simulation->SetParticles(&particles);
+    this->simulation->initializeParticles();
+
     while (!glfwWindowShouldClose(window))
     {
         if (cursor_state == GLFW_MOUSE_BUTTON_LEFT)
-        {            
+        {
             if (isCtrlMouseLeftClick)
             {
                 if (!isCtrlMouseLeftClickPrev)
@@ -644,14 +661,4 @@ int Engine::Init()
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
-
-    glDeleteBuffers(1, &VBO_positions);
-    glDeleteBuffers(1, &VBO_colors);
-    glDeleteVertexArrays(1, &VAO);
-    glDeleteProgram(shaderParticle);
-    glDeleteProgram(shaderText);
-
-    glfwDestroyWindow(window);
-    glfwTerminate();
-    return 0;
 }

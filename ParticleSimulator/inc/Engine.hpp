@@ -26,6 +26,7 @@ private:
     static void KeyboardCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
 public:
     Simulation* simulation;
+    GLFWwindow* window;
 
     GLFWwindow* InitOpenGL();
     int InitFreeType();
@@ -49,4 +50,5 @@ public:
     void SetSimulation(Simulation* simulation);
 
     int Init();
+    void Run();
 };
