@@ -38,7 +38,7 @@ public:
     void LoadAllShaders();
     GLuint GetShader(const std::string& key);
 
-    void SetupBuffers(GLuint& VAO, GLuint& VBO_positions, GLuint& VBO_colors, const std::vector<Particle>* particles);
+    void SetupParticleBuffers(GLuint& VAO, GLuint& VBO_positions, GLuint& VBO_colors, size_t maxParticles);
     void SetupTextBuffers(GLuint& VAO, GLuint& VBO_positions);
 
     void RenderParticles(GLuint VAO, size_t particleCount);

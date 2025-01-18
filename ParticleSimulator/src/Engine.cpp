@@ -256,30 +256,18 @@ GLuint Engine::GetShader(const std::string& key)
     return shaders[key];
 }
 
-void Engine::SetupBuffers(GLuint& VAO, GLuint& VBO_positions, GLuint& VBO_colors, const std::vector<Particle>* particles)
+void Engine::SetupParticleBuffers(GLuint& VAO, GLuint& VBO_positions, GLuint& VBO_colors, size_t maxParticles)
 {
-    std::vector<GLfloat> positions;
-    std::vector<GLfloat> colors;
-
-    for (const auto& p : *particles)
-    {
-        positions.push_back(p.position.x);
-        positions.push_back(p.position.y);
-        colors.push_back(p.color.r);
-        colors.push_back(p.color.g);
-        colors.push_back(p.color.b);
-    }
-
     glGenVertexArrays(1, &VAO);
     glBindVertexArray(VAO);
 
     glGenBuffers(1, &VBO_positions);
     glBindBuffer(GL_ARRAY_BUFFER, VBO_positions);
-    glBufferData(GL_ARRAY_BUFFER, positions.size() * sizeof(GLfloat), positions.data(), GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, maxParticles * 2 * sizeof(GLfloat), nullptr, GL_DYNAMIC_DRAW);
 
     glGenBuffers(1, &VBO_colors);
     glBindBuffer(GL_ARRAY_BUFFER, VBO_colors);
-    glBufferData(GL_ARRAY_BUFFER, colors.size() * sizeof(GLfloat), colors.data(), GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, maxParticles * 3 * sizeof(GLfloat), nullptr, GL_DYNAMIC_DRAW);
 
     glEnableVertexAttribArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, VBO_positions);
@@ -288,11 +276,8 @@ void Engine::SetupBuffers(GLuint& VAO, GLuint& VBO_positions, GLuint& VBO_colors
     glEnableVertexAttribArray(1);
     glBindBuffer(GL_ARRAY_BUFFER, VBO_colors);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
-
-    glEnable(GL_BLEND);
-    glDisable(GL_CULL_FACE);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
+
 
 void Engine::SetupTextBuffers(GLuint& VAO, GLuint& VBO_positions)
 {
@@ -311,7 +296,6 @@ void Engine::SetupTextBuffers(GLuint& VAO, GLuint& VBO_positions)
 
     glBindVertexArray(0);
 }
-
 
 void Engine::RenderParticles(GLuint VAO, size_t particleCount)
 {
@@ -555,7 +539,7 @@ int Engine::Init()
     this->simulation->SetParticles(&particles);
     this->simulation->initializeParticles();
     
-    SetupBuffers(VAO, VBO_positions, VBO_colors, &particles);
+    SetupParticleBuffers(VAO, VBO_positions, VBO_colors, this->simulation->getMaxParticleCount());
     SetupTextBuffers(VAO_text, VBO_text);
 
     glUseProgram(shaderParticle);
@@ -586,20 +570,17 @@ int Engine::Init()
             {
                 if (!isCtrlMouseLeftClickPrev)
                 {
-                    this->simulation->addParticle(glm::vec2(cursor_window_xpos , cursor_window_ypos));
-                    SetupBuffers(VAO, VBO_positions, VBO_colors, &particles);
+                    this->simulation->addParticle(glm::vec2(cursor_window_xpos, cursor_window_ypos));
                 }
             }
             else
             {
                 this->simulation->addParticles(glm::vec2(cursor_window_xpos, cursor_window_ypos));
-                SetupBuffers(VAO, VBO_positions, VBO_colors, &particles);
             }
         }
         else if (cursor_state == GLFW_MOUSE_BUTTON_RIGHT)
         {
             this->simulation->removeParticle(glm::vec2(cursor_window_xpos, cursor_window_ypos));
-            SetupBuffers(VAO, VBO_positions, VBO_colors, &particles);
         }
 
         isCtrlMouseLeftClickPrev = isCtrlMouseLeftClick;
@@ -649,7 +630,7 @@ int Engine::Init()
             glEnable(GL_BLEND);
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-            std::string s = "Particles: " + std::to_string(positions.size());
+            std::string s = "Particles: " + std::to_string(this->simulation->getParticleCount());
             RenderText(s, 10.0f, 10.0f, 24.0f, glm::vec3(1.0f));
         }
 
