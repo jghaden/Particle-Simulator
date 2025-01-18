@@ -204,7 +204,10 @@ void Simulation::addParticle(glm::dvec2 pos)
     p.color = calculateColor(p.velocity);
     p.mass = this->newParticleMass + 1.0;
 
-    this->particles->push_back(p);
+    if (this->getParticleCount() < this->getMaxParticleCount())
+    {
+        this->particles->push_back(p);
+    }
 }
 
 void Simulation::addParticles(glm::dvec2 pos)
@@ -233,7 +236,11 @@ void Simulation::addParticles(glm::dvec2 pos)
         p.velocity = glm::dvec2(this->newParticleVelocity, 0.0);
         p.color = calculateColor(p.velocity);  // Set initial color based on velocity
         p.mass = this->newParticleMass + 1.0;
-        this->particles->push_back(p);
+
+        if (this->getParticleCount() < this->getMaxParticleCount())
+        {
+            this->particles->push_back(p);
+        }
     }
 }
 
@@ -261,4 +268,14 @@ void Simulation::removeParticle(glm::dvec2 pos)
 void Simulation::removeAllParticles()
 {
     this->particles->clear();
+}
+
+int Simulation::getParticleCount()
+{
+    return this->particles->size();
+}
+
+int Simulation::getMaxParticleCount()
+{
+    return MAX_NUM_PARTICLES;
 }
