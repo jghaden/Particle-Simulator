@@ -8,13 +8,13 @@ const int WINDOW_HEIGHT = 1024;
 class Simulation;
 class Particle;
 
-//struct Character
-//{
-//    GLuint TextureID;
-//    glm::ivec2 Size;
-//    glm::ivec2 Bearing;
-//    GLuint Advance;
-//};
+struct Character
+{
+    GLuint TextureID;
+    glm::ivec2 Size;
+    glm::ivec2 Bearing;
+    GLuint Advance;
+};
 
 class Engine
 {
@@ -28,17 +28,21 @@ public:
     Simulation* simulation;
 
     GLFWwindow* InitOpenGL();
-    //int InitFreeType();
+    int InitFreeType();
 
-    //std::map<GLchar, Character> characters;
+    std::map<GLchar, Character> characters;
 
     std::string ReadShaderFile(const char* filePath);
     GLuint CompileShader(GLenum shaderType, const char* shaderSource);
     GLuint LoadShaders(const char* vertex_file_path, const char* fragment_file_path);
+    void LoadAllShaders();
+    GLuint GetShader(const std::string& key);
+
     void SetupBuffers(GLuint& VAO, GLuint& VBO_positions, GLuint& VBO_colors, const std::vector<Particle>* particles);
+    void SetupTextBuffers(GLuint& VAO, GLuint& VBO_positions);
 
     void RenderParticles(GLuint VAO, size_t particleCount);
-    //void RenderText(GLuint& VAO, GLuint& VBO, GLuint &shaderProgram, std::string text, GLfloat x, GLfloat y, GLfloat scale, glm::vec3 color);
+    void RenderText(std::string text, GLfloat x, GLfloat y, GLfloat scale, glm::vec3 color);
 
     void SetSimulation(Simulation* simulation);
 
