@@ -12,7 +12,7 @@ Simulation::Simulation(Engine* engine, SimulationTemplate simulationTemplate)
 
     this->particleBrushSize = 1;
     this->newParticleVelocity = 0.0;
-    this->newParticleMass = 1.0;
+    this->newParticleMass = 10e8;
     this->simulationTime = 0.0;
 }
 
@@ -52,7 +52,7 @@ void Simulation::initializeParticles()
             p.velocity = glm::dvec2(0.0); // Set initial particle velocities to zero
             p.color = calculateColor(p.velocity);  // Set initial color based on velocity
             //p.color = glm::vec3(static_cast<float>(rand()) / RAND_MAX * 2.0f - 0.5f);
-            p.mass = 1.0;
+            p.mass = 1e8;
             this->particles->push_back(p);
         }
     }
@@ -111,43 +111,53 @@ void Simulation::update()
     this->simulationTime += TIME_STEP;
 }
 
-void Simulation::updateParticles(Particles &particles)
+void Simulation::updateParticles()
 {
-    for (size_t i = 0; i < particles.size(); ++i)
+    for (size_t i = 0; i < this->particles->size(); ++i)
     {
+        Particle& pI = (*particles)[i];
+
         /*
         Bounding box to prevent particles escaping from view
         */
-        for (int j = 0; j < 2; ++j)
+        if (BOUNDING_BOX)
         {
-            if (std::abs(particles[i].position[j]) > 1.0)
+            for (int j = 0; j < 2; ++j)
             {
-                particles[i].position[j] = glm::sign(particles[i].position[j]) * 1.0;
-                particles[i].velocity[j] *= -0.9;
+
+                Particle& pJ = (*particles)[j];
+
+                if (std::abs(pI.position[j]) > 1.0)
+                {
+                    pI.position[j] = glm::sign(pI.position[j]) * 1.0;
+                    pI.velocity[j] *= -0.9;
+                }
             }
         }
 
         /*
         Calculate and apply gravitational forces and handle collision of particles
         */
-        for (size_t j = i + 1; j < particles.size(); ++j)
+        for (size_t j = i + 1; j < this->particles->size(); ++j)
         {
-            glm::dvec2 direction = particles[j].position - particles[i].position;
+            Particle& pJ = (*particles)[j];
+
+            glm::dvec2 direction = pJ.position - pI.position;
             double distance = glm::length(direction);
 
             // Gravity calculation
             double gravityDistance = std::max(distance, MIN_DISTANCE);
-            //double forceMagnitude = (GRAVITATIONAL_CONSTANT * particles[i].mass * particles[j].mass) / (distance * distance);
-            double forceMagnitude = GRAVITATIONAL_CONSTANT * particles[i].mass * particles[j].mass / (gravityDistance * gravityDistance + SOFTENING * SOFTENING);
+            //double forceMagnitude = (GRAVITATIONAL_CONSTANT * pI.mass * pJ.mass) / (distance * distance);
+            double forceMagnitude = GRAVITATIONAL_CONSTANT * pI.mass * pJ.mass / (gravityDistance * gravityDistance + SOFTENING * SOFTENING);
 
             glm::dvec2 force = forceMagnitude * glm::normalize(direction);
 
             // Apply gravitational force
-            particles[i].acceleration = force / particles[i].mass;
-            particles[j].acceleration = force / particles[j].mass;
+            pI.acceleration = force / pI.mass;
+            pJ.acceleration = force / pJ.mass;
 
-            particles[i].velocity += particles[i].acceleration * TIME_STEP;
-            particles[j].velocity -= particles[j].acceleration * TIME_STEP;
+            pI.velocity += pI.acceleration * TIME_STEP;
+            pJ.velocity -= pJ.acceleration * TIME_STEP;
 
             /*
             Collision detection and response
@@ -155,34 +165,34 @@ void Simulation::updateParticles(Particles &particles)
             if (distance < 2 * PARTICLE_RADIUS)
             {
                 glm::dvec2 collisionNormal = glm::normalize(direction);
-                glm::dvec2 relativeVelocity = particles[j].velocity - particles[i].velocity;
+                glm::dvec2 relativeVelocity = pJ.velocity - pI.velocity;
 
                 double separatingVelocity = glm::dot(relativeVelocity, collisionNormal);
 
                 if (separatingVelocity < 0)
                 {
-                    double impulse = -(1 + COLLISION_DAMPING) * separatingVelocity / ((1 / particles[i].mass) + (1 / particles[j].mass));
+                    double impulse = -(1 + COLLISION_DAMPING) * separatingVelocity / ((1 / pI.mass) + (1 / pJ.mass));
 
-                    particles[i].velocity -= impulse / particles[i].mass * collisionNormal * REPULSION_FACTOR;
-                    particles[j].velocity += impulse / particles[j].mass * collisionNormal * REPULSION_FACTOR;
+                    pI.velocity -= impulse / pI.mass * collisionNormal * REPULSION_FACTOR;
+                    pJ.velocity += impulse / pJ.mass * collisionNormal * REPULSION_FACTOR;
 
                     // Separate overlapping particles
                     double overlap = 2 * PARTICLE_RADIUS - distance;
                     glm::dvec2 separationVector = overlap * 0.5 * collisionNormal;
-                    particles[i].position -= separationVector;
-                    particles[j].position += separationVector;
+                    pI.position -= separationVector;
+                    pJ.position += separationVector;
                 }
             }
         }
-        
+
         /*
         Update the particle properties
         */
-        particles[i].update();
+        pI.update();
     }
 }
 
-void Simulation::addParticle(Particles &particles, glm::dvec2 pos)
+void Simulation::addParticle(glm::dvec2 pos)
 {
     Particle p;
 
@@ -190,14 +200,14 @@ void Simulation::addParticle(Particles &particles, glm::dvec2 pos)
     float y = 1.0f - 2.0f * (float)pos.y / (float)WINDOW_HEIGHT;
 
     p.position = glm::vec2(x, y);
-    p.velocity = glm::dvec2(0.0f);
+    p.velocity = glm::dvec2(this->newParticleVelocity, 0.0);
     p.color = calculateColor(p.velocity);
-    p.mass = 1.0f;
+    p.mass = this->newParticleMass + 1.0;
 
-    particles.push_back(p);
+    this->particles->push_back(p);
 }
 
-void Simulation::addParticles(Particles &particles, glm::dvec2 pos)
+void Simulation::addParticles(glm::dvec2 pos)
 {
     std::random_device rd;
     std::mt19937 gen(rd());
@@ -220,28 +230,35 @@ void Simulation::addParticles(Particles &particles, glm::dvec2 pos)
 
         p.position = glm::dvec2(r * cos(angle) + x, r * sin(angle) + y); // circle fill
 
-        p.velocity = glm::dvec2(this->newParticleVelocity);
+        p.velocity = glm::dvec2(this->newParticleVelocity, 0.0);
         p.color = calculateColor(p.velocity);  // Set initial color based on velocity
         p.mass = this->newParticleMass + 1.0;
-        particles.push_back(p);
+        this->particles->push_back(p);
     }
 }
 
-void Simulation::removeParticle(Particles &particles, glm::dvec2 pos)
+void Simulation::removeParticle(glm::dvec2 pos)
 {
     double x = 2.0 * pos.x / (double)WINDOW_WIDTH - 1.0;
     double y = 1.0 - 2.0 * pos.y / (double)WINDOW_HEIGHT;
 
-    for (size_t i = 0; i < particles.size(); ++i)
+    for (size_t i = 0; i < this->particles->size(); ++i)
     {
-        glm::dvec2 direction = particles[i].position - glm::dvec2(x, y);
+        Particle& p = (*particles)[i];
+
+        glm::dvec2 direction = p.position - glm::dvec2(x, y);
         double distance = glm::length(direction);
 
         if (distance < (this->particleBrushSize * PARTICLE_RADIUS / 2))
         {
-            std::vector<Particle>::iterator it = particles.begin();
+            std::vector<Particle>::iterator it = this->particles->begin();
             std::advance(it, i);
-            particles.erase(it);
+            this->particles->erase(it);
         }
     }
+}
+
+void Simulation::removeAllParticles()
+{
+    this->particles->clear();
 }
