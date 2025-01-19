@@ -20,6 +20,8 @@
 
 #include "PCH.hpp"
 
+#include "Font.h"
+
 /* Exported types ------------------------------------------------------------*/
 /* Exported constants --------------------------------------------------------*/
 
@@ -61,7 +63,7 @@ public:
     GLFWwindow* InitOpenGL();
     int InitFreeType();
 
-    std::map<GLchar, Character> characters;
+    std::map<GLchar, Character> characters[NUMBER_OF_FONTS];
 
     std::string ReadShaderFile(const char* filePath);
     GLuint CompileShader(GLenum shaderType, const char* shaderSource);
@@ -80,7 +82,7 @@ public:
 
     void RenderCircle(float x, float y, float radius, float outlineThickness, glm::vec4 fillColor, glm::vec4 outlineColor);
     void RenderParticles(GLuint VAO, size_t particleCount);
-    void RenderText(std::string text, GLfloat x, GLfloat y, GLfloat scale, glm::vec3 color);
+    void RenderText(std::string text, GLfloat x, GLfloat y, GLfloat pointSize, FONT_T font, glm::vec3 color);
 
     void SetSimulation(Simulation* simulation);
 

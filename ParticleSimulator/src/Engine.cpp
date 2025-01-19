@@ -46,7 +46,8 @@ static double                                cursor_window_ypos;
 static std::chrono::duration<float>          elapsedTime;
 static std::chrono::system_clock::time_point tp1;
 static std::chrono::system_clock::time_point tp2;
-static FT_Face                               face;
+static FT_Face                               face_roboto_bold;
+static FT_Face                               face_roboto_light;
 static FT_Library                            ft;
 static GLuint                                VAO_particles;
 static GLuint                                VAO_text;
@@ -182,7 +183,14 @@ int Engine::InitFreeType()
     }
 
     // Load a font face
-    if (FT_New_Face(ft, "../data/fonts/Roboto/Roboto-Light.ttf", 0, &face))
+    if (FT_New_Face(ft, "../data/fonts/Roboto/Roboto-Bold.ttf", 0, &face_roboto_bold))
+    {
+        LOG_FATAL("Failed to load font");
+        return -1;
+    }
+
+    // Load a font face
+    if (FT_New_Face(ft, "../data/fonts/Roboto/Roboto-Light.ttf", 0, &face_roboto_light))
     {
         LOG_FATAL("Failed to load font");
         return -1;
@@ -190,56 +198,63 @@ int Engine::InitFreeType()
 
     float pointSize = 64.0f; // Desired font size in points
     int pixelHeight = GetPixelSizeFromPointSize(pointSize, 96.0f);
-    FT_Set_Pixel_Sizes(face, 0, pixelHeight);
+    FT_Set_Pixel_Sizes(face_roboto_bold, 0, pixelHeight);
+    FT_Set_Pixel_Sizes(face_roboto_light, 0, pixelHeight);
 
-    normalizedFaceHeight = face->size->metrics.height / 64.0f; // Convert to float
+    normalizedFaceHeight = face_roboto_light->size->metrics.height / 64.0f; // Convert to float
 
     // Load the first 128 characters of the ASCII set
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1); // Disable byte-alignment restriction
 
-    for (GLubyte c = 0; c < 128; c++)
+    FT_Face fonts[2] = { face_roboto_bold, face_roboto_light };
+
+    for (size_t i = 0; i < 2; i++)
     {
-        // Load character glyph
-        if (FT_Load_Char(face, c, FT_LOAD_RENDER))
+        for (GLubyte c = 0; c < 128; c++)
         {
-            LOG_FATAL("Failed to load glyph");
-            continue;
+            // Load character glyph
+            if (FT_Load_Char(fonts[i], c, FT_LOAD_RENDER))
+            {
+                LOG_FATAL("Failed to load glyph");
+                continue;
+            }
+
+            // Generate texture
+            GLuint texture;
+            glGenTextures(1, &texture);
+            glBindTexture(GL_TEXTURE_2D, texture);
+            glTexImage2D(
+                GL_TEXTURE_2D,
+                0,
+                GL_RED,
+                fonts[i]->glyph->bitmap.width,
+                fonts[i]->glyph->bitmap.rows,
+                0,
+                GL_RED,
+                GL_UNSIGNED_BYTE,
+                fonts[i]->glyph->bitmap.buffer
+            );
+
+            // Set texture options
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+            //// Store character for later use
+            this->characters[i].insert(std::pair<GLchar, Character>(c, {
+                texture,
+                glm::ivec2(fonts[i]->glyph->bitmap.width, fonts[i]->glyph->bitmap.rows),
+                glm::ivec2(fonts[i]->glyph->bitmap_left, fonts[i]->glyph->bitmap_top),
+                static_cast<GLuint>(fonts[i]->glyph->advance.x >> 6)
+                }));
         }
-
-        // Generate texture
-        GLuint texture;
-        glGenTextures(1, &texture);
-        glBindTexture(GL_TEXTURE_2D, texture);
-        glTexImage2D(
-            GL_TEXTURE_2D,
-            0,
-            GL_RED,
-            face->glyph->bitmap.width,
-            face->glyph->bitmap.rows,
-            0,
-            GL_RED,
-            GL_UNSIGNED_BYTE,
-            face->glyph->bitmap.buffer
-        );
-
-        // Set texture options
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-        //// Store character for later use
-        this->characters.insert(std::pair<GLchar, Character>(c, {
-            texture,
-            glm::ivec2(face->glyph->bitmap.width, face->glyph->bitmap.rows),
-            glm::ivec2(face->glyph->bitmap_left, face->glyph->bitmap_top),
-            static_cast<GLuint>(face->glyph->advance.x >> 6)
-        }));
     }
     glBindTexture(GL_TEXTURE_2D, 0);
 
     // Destroy FreeType resources
-    FT_Done_Face(face);
+    FT_Done_Face(face_roboto_bold);
+    FT_Done_Face(face_roboto_light);
     FT_Done_FreeType(ft);
 
     LOG_SUCCESS("Fonts loaded");
@@ -484,7 +499,7 @@ void Engine::RenderParticles(GLuint VAO, size_t particleCount)
     glDrawArrays(GL_POINTS, 0, (GLsizei)particleCount);
 }
 
-void Engine::RenderText(std::string text, GLfloat x, GLfloat y, GLfloat pointSize, glm::vec3 color)
+void Engine::RenderText(std::string text, GLfloat x, GLfloat y, GLfloat pointSize, FONT_T font, glm::vec3 color)
 {
     GLuint shaderProgram = GetShader("text");
     glUseProgram(shaderProgram);
@@ -508,14 +523,14 @@ void Engine::RenderText(std::string text, GLfloat x, GLfloat y, GLfloat pointSiz
     GLfloat baselineOffset = 0.0f;
     for (const char& c : text)
     {
-        Character ch = this->characters[c];
+        Character ch = this->characters[font][c];
         baselineOffset = std::max(baselineOffset, (GLfloat)ch.Bearing.y);
     }
 
     // Iterate through all characters
     for (const char& c : text)
     {
-        Character ch = this->characters[c];
+        Character ch = this->characters[font][c];
 
         // Adjust position for the glyph relative to the baseline
         GLfloat xpos = x + ch.Bearing.x * scaleFactor;
@@ -835,24 +850,29 @@ void Engine::Run()
             glEnable(GL_BLEND);
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-            std::string textParticles = "Particles: " + std::to_string(this->simulation->getParticleCount());
-            RenderText(textParticles, 10.0f, 10.0f, 20.0f, glm::vec3(1.0f));
+            RenderText("Particles:", 10.0f, 10.0f, 20.0f, FONT_T::RobotoBold, glm::vec3(1.0f));
+            sprintf_s(textBuffer, "%lld", this->simulation->getParticleCount());
+            RenderText(textBuffer, 90.0f, 10.0f, 20.0f, FONT_T::RobotoLight, glm::vec3(1.0f));
 
-            std::string textFPS = "FPS: " + std::to_string((int)(1.0f / fElapsedTime));
-            RenderText(textFPS, this->GetWindowWidth() - 70.0f, 10, 18.0f, glm::vec3(1.0f));
+            RenderText("FPS:", this->GetWindowWidth() - 80.0f, 10, 18.0f, FONT_T::RobotoBold, glm::vec3(1.0f, 1.0, 0.0f));
+            sprintf_s(textBuffer, "%ld", (int)(1.0f / fElapsedTime));
+            RenderText(textBuffer, this->GetWindowWidth() - 40.0f, 10, 18.0f, FONT_T::RobotoLight, glm::vec3(1.0f, 1.0, 0.0f));
             
-            sprintf_s(textBuffer, "Mass: %.0e kg", this->simulation->newParticleMass);
-            RenderText(textBuffer, 10.0f, this->GetWindowHeight() - 70.0f, 18.0f, glm::vec3(1.0f));
+            RenderText("Mass:", 10.0f, this->GetWindowHeight() - 70.0f, 18.0f, FONT_T::RobotoBold, glm::vec3(0.61f, 0.85f, 0.9f));
+            sprintf_s(textBuffer, "%.0e kg", this->simulation->newParticleMass);
+            RenderText(textBuffer, 60.0f, this->GetWindowHeight() - 70.0f, 18.0f, FONT_T::RobotoLight, glm::vec3(0.61f, 0.85f, 0.9f));
 
-            sprintf_s(textBuffer, "Velocity: %.0lf m/s", this->simulation->newParticleVelocity);
-            RenderText(textBuffer, 10.0f, this->GetWindowHeight() - 50.0f, 18.0f, glm::vec3(1.0f));
+            RenderText("Velocity:", 10.0f, this->GetWindowHeight() - 50.0f, 18.0f, FONT_T::RobotoBold, glm::vec3(0.61f, 0.85f, 0.9f));
+            sprintf_s(textBuffer, "%.0lf m/s", this->simulation->newParticleVelocity);
+            RenderText(textBuffer, 80.0f, this->GetWindowHeight() - 50.0f, 18.0f, FONT_T::RobotoLight, glm::vec3(0.61f, 0.85f, 0.9f));
 
-            sprintf_s(textBuffer, "Brush size: %d", this->simulation->particleBrushSize);
-            RenderText(textBuffer, 10.0f, this->GetWindowHeight() - 30.0f, 18.0f, glm::vec3(1.0f));
+            RenderText("Brush size:", 10.0f, this->GetWindowHeight() - 30.0f, 18.0f, FONT_T::RobotoBold, glm::vec3(0.61f, 0.85f, 0.9f));
+            sprintf_s(textBuffer, "%d", this->simulation->particleBrushSize);
+            RenderText(textBuffer, 95.0f, this->GetWindowHeight() - 30.0f, 18.0f, FONT_T::RobotoLight, glm::vec3(0.61f, 0.85f, 0.9f));
 
             if (isSimulationPaused)
             {
-                RenderText("| |", this->GetWindowWidth() - 30.0f, this->GetWindowHeight() - 30.0f, 24.0f, glm::vec3(1.0f));
+                RenderText("| |", this->GetWindowWidth() - 30.0f, this->GetWindowHeight() - 30.0f, 24.0f, FONT_T::RobotoLight, glm::vec3(1.0f));
             }
 
             RenderCircle(
