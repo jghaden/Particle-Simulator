@@ -26,31 +26,36 @@
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
 
-static bool                          isClearParticles;
-static bool                          isCtrlMouseLeftClick;
-static bool                          isCtrlMouseLeftClickPrev;
-static bool                          isFrameStepping;
-static bool                          isKeyLeftAltPressed;
-static bool                          isKeyLeftCtrlPressed;
-static bool                          isKeyLeftShiftPressed;
-static bool                          isShowingUI;
-static bool                          isSimulationPaused;
-static int                           cursor_state;
-static int                           cursor_state_prev;
-static int                           particleMassExp;
-static float                         normalizedFaceHeight;
-static double                        cursor_window_xpos;
-static double                        cursor_window_ypos;
-static FT_Face                       face;
-static FT_Library                    ft;
-static GLuint                        VAO;
-static GLuint                        VAO_text;
-static GLuint                        VBO_colors;
-static GLuint                        VBO_positions;
-static GLuint                        VBO_text;
-static glm::mat4                     projection;
-static glm::mat4                     projectionText;
-static std::map<std::string, GLuint> shaders;
+static bool                                  isClearParticles;
+static bool                                  isCtrlMouseLeftClick;
+static bool                                  isCtrlMouseLeftClickPrev;
+static bool                                  isFrameStepping;
+static bool                                  isKeyLeftAltPressed;
+static bool                                  isKeyLeftCtrlPressed;
+static bool                                  isKeyLeftShiftPressed;
+static bool                                  isShowingUI;
+static bool                                  isSimulationPaused;
+static int                                   cursor_state;
+static int                                   cursor_state_prev;
+static int                                   particleMassExp;
+static char                                  textBuffer[256];
+static float                                 fElapsedTime;
+static float                                 normalizedFaceHeight;
+static double                                cursor_window_xpos;
+static double                                cursor_window_ypos;
+static std::chrono::duration<float>          elapsedTime;
+static std::chrono::system_clock::time_point tp1;
+static std::chrono::system_clock::time_point tp2;
+static FT_Face                               face;
+static FT_Library                            ft;
+static GLuint                                VAO;
+static GLuint                                VAO_text;
+static GLuint                                VBO_colors;
+static GLuint                                VBO_positions;
+static GLuint                                VBO_text;
+static glm::mat4                             projection;
+static glm::mat4                             projectionText;
+static std::map<std::string, GLuint>         shaders;
 
 /* Private function prototypes -----------------------------------------------*/
 
@@ -125,7 +130,7 @@ int Engine::InitFreeType()
     }
 
     // Load a font face
-    if (FT_New_Face(ft, "../data/fonts/Roboto/Roboto-Regular.ttf", 0, &face))
+    if (FT_New_Face(ft, "../data/fonts/Roboto/Roboto-Light.ttf", 0, &face))
     {
         std::cerr << "Failed to load font" << std::endl;
         return -1;
@@ -470,8 +475,6 @@ void Engine::MouseScrollCallback(GLFWwindow* window, double xoffset, double yoff
         {
             e->simulation->particleBrushSize--;
         }
-
-        printf("Brush size: %d\r\n", e->simulation->particleBrushSize);
     }
 }
 
@@ -641,6 +644,11 @@ void Engine::Run()
 
     while (!glfwWindowShouldClose(window))
     {
+        tp2 = std::chrono::system_clock::now();
+        elapsedTime = tp2 - tp1;
+        tp1 = tp2;
+        fElapsedTime = elapsedTime.count();
+
         if (cursor_state == GLFW_MOUSE_BUTTON_LEFT)
         {
             if (isCtrlMouseLeftClick)
@@ -691,8 +699,25 @@ void Engine::Run()
             glEnable(GL_BLEND);
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-            std::string s = "Particles: " + std::to_string(this->simulation->getParticleCount());
-            RenderText(s, 10.0f, 10.0f, 24.0f, glm::vec3(1.0f));
+            std::string textParticles = "Particles: " + std::to_string(this->simulation->getParticleCount());
+            RenderText(textParticles, 10.0f, 10.0f, 20.0f, glm::vec3(1.0f));
+
+            std::string textFPS = "FPS: " + std::to_string((int)(1.0f / fElapsedTime));
+            RenderText(textFPS, WINDOW_WIDTH - 70.0f, 10, 18.0f, glm::vec3(1.0f));
+            
+            sprintf_s(textBuffer, "Mass: %.0e kg", this->simulation->newParticleMass);
+            RenderText(textBuffer, 10.0f, WINDOW_HEIGHT - 70.0f, 18.0f, glm::vec3(1.0f));
+
+            sprintf_s(textBuffer, "Velocity: %.0lf m/s", this->simulation->newParticleVelocity);
+            RenderText(textBuffer, 10.0f, WINDOW_HEIGHT - 50.0f, 18.0f, glm::vec3(1.0f));
+
+            sprintf_s(textBuffer, "Brush size: %d", this->simulation->particleBrushSize);
+            RenderText(textBuffer, 10.0f, WINDOW_HEIGHT - 30.0f, 18.0f, glm::vec3(1.0f));
+
+            if (isSimulationPaused)
+            {
+                RenderText("| |", WINDOW_WIDTH - 30.0f, WINDOW_HEIGHT - 30.0f, 24.0f, glm::vec3(1.0f));
+            }
         }
 
         glfwSwapBuffers(window);
