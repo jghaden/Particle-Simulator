@@ -284,6 +284,7 @@ GLuint Engine::LoadShaders(const char* vertex_file_path, const char* fragment_fi
 
 void Engine::LoadAllShaders()
 {
+    shaders["circle"] = LoadShaders("../data/shaders/circle.vs", "../data/shaders/circle.fs");
     shaders["particle"] = LoadShaders("../data/shaders/particle.vs", "../data/shaders/particle.fs");
     shaders["text"]= LoadShaders("../data/shaders/text.vs", "../data/shaders/text.fs");
 
@@ -355,6 +356,61 @@ void Engine::UpdateParticleBuffers(const std::vector<Particle>& particles)
 
     glBindBuffer(GL_ARRAY_BUFFER, VBO_colors);
     glBufferSubData(GL_ARRAY_BUFFER, 0, colors.size() * sizeof(GLfloat), colors.data());
+}
+
+void Engine::RenderCircle(float x, float y, float radius, float outlineThickness, glm::vec4 fillColor, glm::vec4 outlineColor)
+{
+    GLuint shaderProgram = GetShader("circle");
+    glUseProgram(shaderProgram);
+
+    // Convert screen space (x, y) and radius to NDC
+    int width, height;
+    glfwGetWindowSize(window, &width, &height);
+    float centerX = (x / width) * 2.0f - 1.0f;  // Convert x to NDC
+    float centerY = 1.0f - (y / height) * 2.0f; // Convert y to NDC and flip y-axis
+    float ndcRadius = radius / std::min(width, height) * 2.0f;
+    float ndcOutlineThickness = outlineThickness / std::min(width, height) * 2.0f;
+
+    // Pass uniforms
+    glUniform2f(glGetUniformLocation(shaderProgram, "circleCenter"), centerX, centerY);
+    glUniform1f(glGetUniformLocation(shaderProgram, "radius"), ndcRadius);
+    glUniform1f(glGetUniformLocation(shaderProgram, "outlineThickness"), ndcOutlineThickness);
+    glUniform4f(glGetUniformLocation(shaderProgram, "fillColor"), fillColor.r, fillColor.g, fillColor.b, fillColor.a);
+    glUniform4f(glGetUniformLocation(shaderProgram, "outlineColor"), outlineColor.r, outlineColor.g, outlineColor.b, outlineColor.a);
+
+    // Render a full-screen quad
+    float quadVertices[] = {
+        -1.0f, -1.0f,
+         1.0f, -1.0f,
+         1.0f,  1.0f,
+        -1.0f,  1.0f,
+    };
+    unsigned int indices[] = { 0, 1, 2, 2, 3, 0 };
+
+    GLuint vao, vbo, ebo;
+    glGenVertexArrays(1, &vao);
+    glGenBuffers(1, &vbo);
+    glGenBuffers(1, &ebo);
+
+    glBindVertexArray(vao);
+
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), quadVertices, GL_STATIC_DRAW);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+
+    glBindVertexArray(vao);
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+    // Cleanup
+    glBindVertexArray(0);
+    glDeleteBuffers(1, &vbo);
+    glDeleteBuffers(1, &ebo);
+    glDeleteVertexArrays(1, &vao);
 }
 
 void Engine::RenderParticles(GLuint VAO, size_t particleCount)
@@ -596,7 +652,7 @@ int Engine::Init()
     glfwSetWindowUserPointer(window, this);
     glfwSetWindowSizeCallback(window, WindowResizeCallback);
     glfwSetCursorPosCallback(window, MousePositionCallback);
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
     glfwSetMouseButtonCallback(window, MouseButtonCallback);
     glfwSetScrollCallback(window, MouseScrollCallback);
     glfwSetKeyCallback(window, KeyboardCallback);
@@ -730,7 +786,16 @@ void Engine::Run()
             {
                 RenderText("| |", WINDOW_WIDTH - 30.0f, WINDOW_HEIGHT - 30.0f, 24.0f, glm::vec3(1.0f));
             }
-        }
+
+            RenderCircle(
+                cursor_window_xpos,                         // x position in screen space
+                cursor_window_ypos,                         // y position in screen space
+                this->simulation->particleBrushSize * 3,    // Circle radius in pixels
+                1.0f,                                       // Outline thickness in pixels
+                glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),          // Fill color (transparent)
+                glm::vec4(0.75f, 0.75f, 0.75f, 1.0f)        // Outline color (white)
+            );
+        }        
 
         glfwSwapBuffers(window);
         glfwPollEvents();

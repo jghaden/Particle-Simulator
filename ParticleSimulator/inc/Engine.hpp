@@ -70,6 +70,7 @@ public:
 
     void UpdateParticleBuffers(const std::vector<Particle>& particles);
 
+    void RenderCircle(float x, float y, float radius, float outlineThickness, glm::vec4 fillColor, glm::vec4 outlineColor);
     void RenderParticles(GLuint VAO, size_t particleCount);
     void RenderText(std::string text, GLfloat x, GLfloat y, GLfloat scale, glm::vec3 color);
 
