@@ -147,9 +147,13 @@ void Simulation::update()
 
 void Simulation::updateParticles()
 {
+    this->totalMass = 0;
+
     for (size_t i = 0; i < this->particles->size(); ++i)
     {
         Particle& pI = (*particles)[i];
+
+        this->totalMass += pI.mass;
 
         /*
         Bounding box to prevent particles escaping from view
@@ -313,6 +317,12 @@ size_t Simulation::getMaxParticleCount()
 {
     return MAX_NUM_PARTICLES;
 }
+
+double Simulation::getTotalMass()
+{
+    return this->totalMass;
+}
+
 
 
 /******************************************************************************/

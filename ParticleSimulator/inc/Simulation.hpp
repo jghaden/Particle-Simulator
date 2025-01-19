@@ -68,6 +68,8 @@ typedef glm::dvec2 Vec2D;
 
 class Simulation
 {
+private:
+    double totalMass;
 public:
     Simulation(Engine* engine, SimulationTemplate simulationTemplate = SimulationTemplate::Empty);
 
@@ -85,6 +87,7 @@ public:
 
     size_t getParticleCount();
     size_t getMaxParticleCount();
+    double getTotalMass();
 
     int particleBrushSize;
     double newParticleVelocity;
