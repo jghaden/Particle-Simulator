@@ -179,6 +179,13 @@ glfw3.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     <ClInclude Include="inc\PCH.hpp" />
     <ClInclude Include="inc\Simulation.hpp" />
     <ClInclude Include="inc\Utility.hpp" />
+    <ClInclude Include="resource.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="ParticleSimulator.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="data\img\icon.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
