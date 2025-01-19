@@ -74,7 +74,7 @@ GLFWwindow* Engine::InitOpenGL()
 {
     if (!glfwInit())
     {
-        std::cerr << "Failed to initialize GLFW" << std::endl;
+        LOG_FATAL("Failed to initialize GLFW");
         return nullptr;
     }
 
@@ -94,7 +94,7 @@ GLFWwindow* Engine::InitOpenGL()
 
     if (!window)
     {
-        std::cerr << "Failed to create GLFW window" << std::endl;
+        LOG_FATAL("Failed to create GLFW window");
         glfwTerminate();
         return nullptr;
     }
@@ -103,7 +103,7 @@ GLFWwindow* Engine::InitOpenGL()
 
     if (glewInit() != GLEW_OK)
     {
-        std::cerr << "Failed to initialize GLEW" << std::endl;
+        LOG_FATAL("Failed to initialize GLEW");
         return nullptr;
     }
 
@@ -123,16 +123,18 @@ void Engine::WindowResizeCallback(GLFWwindow* window, int width, int height)
 
 int Engine::InitFreeType()
 {   
+    LOG_INFO("Loading fonts");
+
     if (FT_Init_FreeType(&ft))
     {
-        std::cerr << "Could not init FreeType Library" << std::endl;
+        LOG_FATAL("Could not initialize FreeType library");
         return -1;
     }
 
     // Load a font face
     if (FT_New_Face(ft, "../data/fonts/Roboto/Roboto-Light.ttf", 0, &face))
     {
-        std::cerr << "Failed to load font" << std::endl;
+        LOG_FATAL("Failed to load font");
         return -1;
     }
 
@@ -150,7 +152,7 @@ int Engine::InitFreeType()
         // Load character glyph
         if (FT_Load_Char(face, c, FT_LOAD_RENDER))
         {
-            std::cerr << "Failed to load Glyph" << std::endl;
+            LOG_FATAL("Failed to load glyph");
             continue;
         }
 
@@ -190,6 +192,8 @@ int Engine::InitFreeType()
     FT_Done_Face(face);
     FT_Done_FreeType(ft);
 
+    LOG_SUCCESS("Fonts loaded");
+
     return 0;
 }
 
@@ -199,7 +203,7 @@ std::string Engine::ReadShaderFile(const char* filePath)
     std::ifstream shaderFile(filePath);
     if (!shaderFile.is_open())
     {
-        std::cerr << "Failed to open shader file: " << filePath << std::endl;
+        LOG_FATAL("Failed to open shader file: %s", filePath);
         return "";
     }
 
@@ -223,7 +227,7 @@ GLuint Engine::CompileShader(GLenum shaderType, const char* shaderSource)
     if (!success)
     {
         glGetShaderInfoLog(shader, 512, nullptr, infoLog);
-        std::cerr << "Shader compilation failed: " << infoLog << std::endl;
+        LOG_FATAL("Shader compilation failed: %s", infoLog);
     }
 
     return shader;
@@ -232,6 +236,8 @@ GLuint Engine::CompileShader(GLenum shaderType, const char* shaderSource)
 // Function to load, compile, and link shaders
 GLuint Engine::LoadShaders(const char* vertex_file_path, const char* fragment_file_path)
 {
+    LOG_INFO("Compiling shaders: [%s, %s]", vertex_file_path, fragment_file_path);
+
     // Read the vertex shader code from the file
     std::string vertexShaderCode = ReadShaderFile(vertex_file_path);
     if (vertexShaderCode.empty()) return 0;
@@ -262,7 +268,7 @@ GLuint Engine::LoadShaders(const char* vertex_file_path, const char* fragment_fi
     if (!success)
     {
         glGetProgramInfoLog(shaderProgram, 512, nullptr, infoLog);
-        std::cerr << "Shader program linking failed: " << infoLog << std::endl;
+        LOG_FATAL("Shader program linking failed: %s", infoLog);
         glDeleteProgram(shaderProgram);
         return 0;
     }
@@ -271,6 +277,8 @@ GLuint Engine::LoadShaders(const char* vertex_file_path, const char* fragment_fi
     glDeleteShader(vertexShader);
     glDeleteShader(fragmentShader);
 
+    LOG_SUCCESS("Shaders compiled");
+
     return shaderProgram;
 }
 
@@ -278,6 +286,8 @@ void Engine::LoadAllShaders()
 {
     shaders["particle"] = LoadShaders("../data/shaders/particle.vs", "../data/shaders/particle.fs");
     shaders["text"]= LoadShaders("../data/shaders/text.vs", "../data/shaders/text.fs");
+
+    LOG_SUCCESS("Shaders loaded");
 }
 
 GLuint Engine::GetShader(const std::string& key)
@@ -551,6 +561,8 @@ void Engine::SetSimulation(Simulation* simulation)
 
 int Engine::Init()
 {
+    LOG_INFO("Engine starting");
+
     isKeyLeftAltPressed      = false;
     isKeyLeftCtrlPressed     = false;
     isKeyLeftShiftPressed    = false;
@@ -632,6 +644,8 @@ int Engine::Init()
 
 void Engine::Run()
 {
+    LOG_SUCCESS("Engine running");
+
     GLuint shaderParticle = GetShader("particle");
 
     std::vector<Particle> particles;
