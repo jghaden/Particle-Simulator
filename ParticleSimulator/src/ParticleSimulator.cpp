@@ -48,13 +48,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 
     if (cmdLine.find("--console") != std::string::npos)
     {
-        AllocConsole();
-
-        FILE* file = nullptr;
-
-        freopen_s(&file, "CONOUT$", "w", stdout);
-        freopen_s(&file, "CONOUT$", "w", stderr);
-        freopen_s(&file, "CONIN$", "r", stdin);
+        ShowConsole();
     }
 
     Engine e;
