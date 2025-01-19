@@ -41,8 +41,22 @@
   * @param  None
   * @retval None
   */
-int main()
+int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPSTR lpCmdLine, _In_ int nCmdShow)
 {
+    // Parse command-line arguments
+    std::string cmdLine(lpCmdLine);
+
+    if (cmdLine.find("--console") != std::string::npos)
+    {
+        AllocConsole();
+
+        FILE* file = nullptr;
+
+        freopen_s(&file, "CONOUT$", "w", stdout);
+        freopen_s(&file, "CONOUT$", "w", stderr);
+        freopen_s(&file, "CONIN$", "r", stdin);
+    }
+
     Engine e;
 
     Simulation sim(&e);

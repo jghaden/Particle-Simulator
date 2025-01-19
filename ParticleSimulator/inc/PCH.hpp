@@ -18,6 +18,8 @@
 
 /* Includes ------------------------------------------------------------------*/
 
+#include <Windows.h>
+
 #include <vector>
 #include <random>
 #include <cmath>
@@ -32,6 +34,7 @@
 #include <cstdlib>
 #include <cstdio>
 #include <cstring>
+#include <string>
 #include <stdexcept>
 
 #include <GL/glew.h>
