@@ -48,7 +48,7 @@
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
-
+#include "Utility.hpp"
 
 #endif /* __PCH_HPP */
 
