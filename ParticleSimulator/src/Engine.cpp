@@ -100,6 +100,7 @@ GLFWwindow* Engine::InitOpenGL()
     }
 
     glfwMakeContextCurrent(window);
+    glfwSetWindowUserPointer(window, this);
 
     if (glewInit() != GLEW_OK)
     {
@@ -115,10 +116,47 @@ GLFWwindow* Engine::InitOpenGL()
 
 void Engine::WindowResizeCallback(GLFWwindow* window, int width, int height)
 {
-    int left, top, right, bottom;
-    glfwGetWindowFrameSize(window, &left, &top, &right, &bottom);
+    // Get the associated Engine instance
+    Engine* engine = static_cast<Engine*>(glfwGetWindowUserPointer(window));
 
-    glViewport(0, 0, width, height);
+    if (engine)
+    {
+        // Store width and height in the Engine instance
+        engine->window_width = width;
+        engine->window_height = height;
+
+        // Update OpenGL viewport
+        glViewport(0, 0, width, height);
+
+        // Calculate the new aspect ratio
+        float aspectRatio = static_cast<float>(width) / static_cast<float>(height);
+
+        // Update projection matrices
+        if (aspectRatio > 1.0f)
+        {
+            // Wider window: extend horizontal range
+            projection = glm::ortho(
+                -aspectRatio, aspectRatio,
+                -1.0f, 1.0f,
+                0.1f, 100.0f
+            );
+        }
+        else
+        {
+            // Taller window: extend vertical range
+            projection = glm::ortho(
+                -1.0f, 1.0f,
+                -1.0f / aspectRatio, 1.0f / aspectRatio,
+                0.1f, 100.0f
+            );
+        }
+
+        projectionText = glm::ortho(
+            0.0f, static_cast<float>(width),    // Text rendering in screen space
+            static_cast<float>(height), 0.0f,  // Flip y-axis for top-left origin
+            -1.0f, 1.0f
+        );
+    }
 }
 
 int Engine::InitFreeType()
@@ -294,6 +332,21 @@ void Engine::LoadAllShaders()
 GLuint Engine::GetShader(const std::string& key)
 {
     return shaders[key];
+}
+
+int Engine::GetWindowWidth() const
+{
+    return this->window_width;
+}
+int Engine::GetWindowHeight() const
+{
+    return this->window_height;
+}
+
+void Engine::SetWindowSize(int width, int height)
+{
+    this->window_width = width;
+    this->window_height = height;
 }
 
 void Engine::SetupParticleBuffers(GLuint& VAO, GLuint& VBO_positions, GLuint& VBO_colors, size_t maxParticles)
@@ -619,6 +672,9 @@ int Engine::Init()
 {
     LOG_INFO("Engine starting");
 
+    this->window_width = WINDOW_WIDTH;
+    this->window_height = WINDOW_HEIGHT;
+
     isKeyLeftAltPressed      = false;
     isKeyLeftCtrlPressed     = false;
     isKeyLeftShiftPressed    = false;
@@ -639,8 +695,8 @@ int Engine::Init()
         0.1f, 100.0f 
     );
     projectionText = glm::ortho(
-        0.0f, static_cast<GLfloat>(WINDOW_WIDTH),
-        static_cast<GLfloat>(WINDOW_HEIGHT), 0.0f,
+        0.0f, static_cast<GLfloat>(this->GetWindowWidth()),
+        static_cast<GLfloat>(this->GetWindowHeight()), 0.0f,
         -1.0f, 1.0f
     );
 
@@ -679,11 +735,11 @@ int Engine::Init()
 
     glm::mat4 mvp = projection * view * model;
 
+    glUniformMatrix4fv(glGetUniformLocation(shaderParticle, "MVP"), 1, GL_FALSE, glm::value_ptr(projection * view * model));
+    glUniformMatrix4fv(glGetUniformLocation(shaderText, "projection"), 1, GL_FALSE, glm::value_ptr(projectionText));
+
     GLint mvpLoc = glGetUniformLocation(shaderParticle, "MVP");
     glUniformMatrix4fv(mvpLoc, 1, GL_FALSE, glm::value_ptr(mvp));
-
-    GLint zoomLoc = glGetUniformLocation(shaderParticle, "zoom");
-    glUniform1f(zoomLoc, zoom);
 
     this->Run();
 
@@ -771,20 +827,20 @@ void Engine::Run()
             RenderText(textParticles, 10.0f, 10.0f, 20.0f, glm::vec3(1.0f));
 
             std::string textFPS = "FPS: " + std::to_string((int)(1.0f / fElapsedTime));
-            RenderText(textFPS, WINDOW_WIDTH - 70.0f, 10, 18.0f, glm::vec3(1.0f));
+            RenderText(textFPS, this->GetWindowWidth() - 70.0f, 10, 18.0f, glm::vec3(1.0f));
             
             sprintf_s(textBuffer, "Mass: %.0e kg", this->simulation->newParticleMass);
-            RenderText(textBuffer, 10.0f, WINDOW_HEIGHT - 70.0f, 18.0f, glm::vec3(1.0f));
+            RenderText(textBuffer, 10.0f, this->GetWindowHeight() - 70.0f, 18.0f, glm::vec3(1.0f));
 
             sprintf_s(textBuffer, "Velocity: %.0lf m/s", this->simulation->newParticleVelocity);
-            RenderText(textBuffer, 10.0f, WINDOW_HEIGHT - 50.0f, 18.0f, glm::vec3(1.0f));
+            RenderText(textBuffer, 10.0f, this->GetWindowHeight() - 50.0f, 18.0f, glm::vec3(1.0f));
 
             sprintf_s(textBuffer, "Brush size: %d", this->simulation->particleBrushSize);
-            RenderText(textBuffer, 10.0f, WINDOW_HEIGHT - 30.0f, 18.0f, glm::vec3(1.0f));
+            RenderText(textBuffer, 10.0f, this->GetWindowHeight() - 30.0f, 18.0f, glm::vec3(1.0f));
 
             if (isSimulationPaused)
             {
-                RenderText("| |", WINDOW_WIDTH - 30.0f, WINDOW_HEIGHT - 30.0f, 24.0f, glm::vec3(1.0f));
+                RenderText("| |", this->GetWindowWidth() - 30.0f, this->GetWindowHeight() - 30.0f, 24.0f, glm::vec3(1.0f));
             }
 
             RenderCircle(

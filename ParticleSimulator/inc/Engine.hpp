@@ -50,7 +50,11 @@ private:
     static void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
     static void MouseScrollCallback(GLFWwindow* window, double xoffset, double yoffset);
     static void KeyboardCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
+
+    int window_width;
+    int window_height;
 public:
+
     Simulation* simulation;
     GLFWwindow* window;
 
@@ -64,6 +68,10 @@ public:
     GLuint LoadShaders(const char* vertex_file_path, const char* fragment_file_path);
     void LoadAllShaders();
     GLuint GetShader(const std::string& key);
+
+    int GetWindowWidth() const;
+    int GetWindowHeight() const;
+    void SetWindowSize(int width, int height);
 
     void SetupParticleBuffers(GLuint& VAO, GLuint& VBO_positions, GLuint& VBO_colors, size_t maxParticles);
     void SetupTextBuffers(GLuint& VAO, GLuint& VBO_positions);
