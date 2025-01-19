@@ -38,6 +38,7 @@ static bool                                  isSimulationPaused;
 static int                                   cursor_state;
 static int                                   cursor_state_prev;
 static int                                   particleMassExp;
+static int                                   timeStepExp;
 static char                                  textBuffer[256];
 static float                                 fElapsedTime;
 static float                                 normalizedFaceHeight;
@@ -648,6 +649,9 @@ void Engine::KeyboardCallback(GLFWwindow* window, int key, int scancode, int act
                         break;
                     }
 
+                    case GLFW_KEY_COMMA: timeStepExp -= 1; break;
+                    case GLFW_KEY_PERIOD: timeStepExp += 1; break;
+
                     case GLFW_KEY_0: particleMassExp = (isKeyLeftCtrlPressed) ? 10 : 0; break;
                     case GLFW_KEY_1: particleMassExp = (isKeyLeftCtrlPressed) ? 11 : 1; break;
                     case GLFW_KEY_2: particleMassExp = (isKeyLeftCtrlPressed) ? 12 : 2; break;
@@ -670,7 +674,7 @@ void Engine::KeyboardCallback(GLFWwindow* window, int key, int scancode, int act
                     case GLFW_KEY_F1: isShowingUI = !isShowingUI; break;
 
                     case GLFW_KEY_ESCAPE: break;
-                    case GLFW_KEY_LEFT_CONTROL: isKeyLeftCtrlPressed = true; break;
+                    case GLFW_KEY_LEFT_CONTROL: isKeyLeftCtrlPressed = true; break;                        
 
                     case GLFW_KEY_KP_0: particleMassExp = (isKeyLeftCtrlPressed) ? 30 : 20; break;
                     case GLFW_KEY_KP_1: particleMassExp = (isKeyLeftCtrlPressed) ? 31 : 21; break;
@@ -685,6 +689,7 @@ void Engine::KeyboardCallback(GLFWwindow* window, int key, int scancode, int act
                 }
 
                 e->simulation->newParticleMass = powl(10, particleMassExp);
+                e->simulation->SetTimeStep(powl(10, -timeStepExp));
                 break;
         }
     }
@@ -712,6 +717,7 @@ int Engine::Init()
     isFrameStepping          = false;
     isShowingUI              = true;
     particleMassExp          = 8;
+    timeStepExp              = 3;
     cursor_state             = -1;
     cursor_state_prev        = -1;
     cursor_window_xpos       = -1;
@@ -855,12 +861,16 @@ void Engine::Run()
             RenderText(textBuffer, 90.0f, 10.0f, 20.0f, FONT_T::RobotoLight, glm::vec3(1.0f));
 
             RenderText("Mass:", 10.0f, 30.0f, 20.0f, FONT_T::RobotoBold, glm::vec3(1.0f));
-            sprintf_s(textBuffer, "%.0e kg", this->simulation->getTotalMass());
+            sprintf_s(textBuffer, "%.2e kg", this->simulation->getTotalMass());
             RenderText(textBuffer, 90.0f, 30.0f, 20.0f, FONT_T::RobotoLight, glm::vec3(1.0f));
 
-            RenderText("FPS:", this->GetWindowWidth() - 80.0f, 10, 18.0f, FONT_T::RobotoBold, glm::vec3(1.0f, 1.0, 0.0f));
+            RenderText("Timestep:", this->GetWindowWidth() - 130.0f, 10, 18.0f, FONT_T::RobotoBold, glm::vec3(1.0f, 1.0, 0.0f));
+            sprintf_s(textBuffer, "%.0e s", this->simulation->getTimeStep());
+            RenderText(textBuffer, this->GetWindowWidth() - 55.0f, 10, 18.0f, FONT_T::RobotoLight, glm::vec3(1.0f, 1.0, 0.0f));
+
+            RenderText("FPS:", this->GetWindowWidth() - 93.0f, 30, 18.0f, FONT_T::RobotoBold, glm::vec3(1.0f, 1.0, 0.0f));
             sprintf_s(textBuffer, "%ld", (int)(1.0f / fElapsedTime));
-            RenderText(textBuffer, this->GetWindowWidth() - 40.0f, 10, 18.0f, FONT_T::RobotoLight, glm::vec3(1.0f, 1.0, 0.0f));
+            RenderText(textBuffer, this->GetWindowWidth() - 55.0f, 30, 18.0f, FONT_T::RobotoLight, glm::vec3(1.0f, 1.0, 0.0f));
             
             RenderText("Mass:", 10.0f, this->GetWindowHeight() - 70.0f, 18.0f, FONT_T::RobotoBold, glm::vec3(0.61f, 0.85f, 0.9f));
             sprintf_s(textBuffer, "%.0e kg", this->simulation->newParticleMass);
