@@ -40,9 +40,11 @@ Simulation::Simulation(Engine* engine, SimulationTemplate simulationTemplate)
     this->engine = engine;
     this->engine->SetSimulation(this);
 
+    this->particles = nullptr;
+
     this->simulationTemplate = simulationTemplate;
 
-    this->particleBrushSize = 1;
+    this->particleBrushSize = 5;
     this->newParticleVelocity = 0.0;
     this->newParticleMass = 1e8;
     this->simulationTime = 0.0;
