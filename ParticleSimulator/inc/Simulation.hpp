@@ -1,8 +1,29 @@
-#pragma once
+/**
+  ******************************************************************************
+  * @file    Simulation.hpp
+  * @author  Josh Haden
+  * @version V0.0.1
+  * @date    18 JAN 2025
+  * @brief   Header for Simulation.cpp
+  ******************************************************************************
+  * @attention
+  *
+  *
+  ******************************************************************************
+  */
+
+/* Define to prevent recursive inclusion -------------------------------------*/
+#ifndef __SIMULATION_HPP
+#define __SIMULATION_HPP
+
+/* Includes ------------------------------------------------------------------*/
 
 #include "PCH.hpp"
 
 #include "Engine.hpp"
+
+/* Exported types ------------------------------------------------------------*/
+/* Exported constants --------------------------------------------------------*/
 
 const bool   BOUNDING_BOX = false;
 const int    NUM_PARTICLES = 2'000;
@@ -17,6 +38,11 @@ const double DAMPING = 1.0;                         // Velocity damping factor
 const double COLLISION_DAMPING = 0.75;              // Collision response damping
 const double PARTICLE_RADIUS = 0.0055;              // Radius of each particle for collision detection
 const double REPULSION_FACTOR = 1.05;
+
+/* Exported macro ------------------------------------------------------------*/
+/* Exported variables --------------------------------------------------------*/
+/* Exported functions ------------------------------------------------------- */
+/* Class definition --------------------------------------------------------- */
 
 enum SimulationTemplate
 {
@@ -70,3 +96,9 @@ public:
 
     SimulationTemplate simulationTemplate;
 };
+
+
+
+#endif /* __SIMULATION_HPP */
+
+/************************END OF FILE************************/

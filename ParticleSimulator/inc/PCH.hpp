@@ -1,4 +1,22 @@
-#pragma once
+/**
+  ******************************************************************************
+  * @file    PCH.hpp
+  * @author  Josh Haden
+  * @version V0.0.1
+  * @date    18 JAN 2025
+  * @brief   Precompiled header
+  ******************************************************************************
+  * @attention
+  *
+  *
+  ******************************************************************************
+  */
+
+  /* Define to prevent recursive inclusion -------------------------------------*/
+#ifndef __PCH_HPP
+#define __PCH_HPP
+
+/* Includes ------------------------------------------------------------------*/
 
 #include <vector>
 #include <random>
@@ -26,3 +44,9 @@
 
 #include <ft2build.h>
 #include FT_FREETYPE_H
+
+
+
+#endif /* __PCH_HPP */
+
+/************************END OF FILE************************/

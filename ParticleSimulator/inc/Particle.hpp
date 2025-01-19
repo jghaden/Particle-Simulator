@@ -1,6 +1,35 @@
-#pragma once
+/**
+  ******************************************************************************
+  * @file    Particle.hpp
+  * @author  Josh Haden
+  * @version V0.0.1
+  * @date    18 JAN 2025
+  * @brief   Header for Particle.cpp
+  ******************************************************************************
+  * @attention
+  *
+  *
+  ******************************************************************************
+  */
+
+/* Define to prevent recursive inclusion -------------------------------------*/
+#ifndef __PARTICLE_HPP
+#define __PARTICLE_HPP
+
+/* Includes ------------------------------------------------------------------*/
 
 #include "PCH.hpp"
+
+/* Exported types ------------------------------------------------------------*/
+/* Exported constants --------------------------------------------------------*/
+/* Exported macro ------------------------------------------------------------*/
+/* Exported variables --------------------------------------------------------*/
+/* Exported functions ------------------------------------------------------- */
+
+glm::vec3 interpolateColor(float t, const std::vector<std::pair<float, glm::vec3>>& colorStops);
+glm::vec3 calculateColor(const glm::dvec2& velocity);
+
+/* Class definition --------------------------------------------------------- */
 
 class Particle
 {
@@ -22,26 +51,8 @@ public:
     void update();
 };
 
-//class ParticleSystem
-//{
-//private:
-//    std::vector<Particle> particles;
-//    float cellSize;
-//    std::unordered_map<int64_t, std::vector<size_t>> grid;
-//
-//    int64_t getGridKey(const glm::vec2& pos) const;
-//
-//    void updateGrid();
-//
-//public:
-//    ParticleSystem(float _cellSize) : cellSize(_cellSize) {};
-//
-//    void addParticle(const Particle& particle);
-//
-//    void applyGravity(float deltaTime);
-//
-//    const std::vector<Particle>& getParticles() const;
-//};
 
-glm::vec3 interpolateColor(float t, const std::vector<std::pair<float, glm::vec3>>& colorStops);
-glm::vec3 calculateColor(const glm::dvec2& velocity);
+
+#endif /* __PARTICLE_HPP */
+
+/************************END OF FILE************************/

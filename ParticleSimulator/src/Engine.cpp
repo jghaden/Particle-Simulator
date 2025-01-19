@@ -1,37 +1,68 @@
+/**
+  ******************************************************************************
+  * @file    Engine.cpp
+  * @author  Josh Haden
+  * @version V0.0.1
+  * @date    18 JAN 2025
+  * @brief
+  ******************************************************************************
+  * @attention
+  *
+  *
+  ******************************************************************************
+  */
+
+/* Includes ------------------------------------------------------------------*/
+
 #include "PCH.hpp"
 
 #include "Engine.hpp"
 #include "Simulation.hpp"
 #include "Particle.hpp"
 
-static bool isKeyLeftAltPressed = false;
-static bool isKeyLeftCtrlPressed = false;
-static bool isKeyLeftShiftPressed = false;
-static bool isCtrlMouseLeftClick = false;
-static bool isCtrlMouseLeftClickPrev = false;
+/* Global Variables ----------------------------------------------------------*/
+/* Private typedef -----------------------------------------------------------*/
+/* Private define ------------------------------------------------------------*/
+/* Private macro -------------------------------------------------------------*/
+/* Private variables ---------------------------------------------------------*/
 
-static bool isClearParticles = false;
-static bool isSimulationPaused = false;
-static bool isFrameStepping = false;
-static bool isShowingUI = true;
+static bool                          isClearParticles;
+static bool                          isCtrlMouseLeftClick;
+static bool                          isCtrlMouseLeftClickPrev;
+static bool                          isFrameStepping;
+static bool                          isKeyLeftAltPressed;
+static bool                          isKeyLeftCtrlPressed;
+static bool                          isKeyLeftShiftPressed;
+static bool                          isShowingUI;
+static bool                          isSimulationPaused;
+static int                           cursor_state;
+static int                           cursor_state_prev;
+static int                           particleMassExp;
+static float                         normalizedFaceHeight;
+static double                        cursor_window_xpos;
+static double                        cursor_window_ypos;
+static FT_Face                       face;
+static FT_Library                    ft;
+static GLuint                        VAO;
+static GLuint                        VAO_text;
+static GLuint                        VBO_colors;
+static GLuint                        VBO_positions;
+static GLuint                        VBO_text;
+static glm::mat4                     projection;
+static glm::mat4                     projectionText;
+static std::map<std::string, GLuint> shaders;
 
-FT_Library ft;
-FT_Face face;
+/* Private function prototypes -----------------------------------------------*/
 
-GLuint VAO, VBO_positions, VBO_colors;
-GLuint VAO_text, VBO_text;
+int GetPixelSizeFromPointSize(float pointSize, float dpi = 96.0f);
 
-glm::mat4 projection = glm::ortho(
-    -1.0f, 1.0f,    // Left and right
-    -1.0f, 1.0f,    // Bottom and top
-    0.1f, 100.0f    // Near and far planes
-);
 
-glm::mat4 projectionText = glm::ortho(
-    0.0f, static_cast<GLfloat>(WINDOW_WIDTH),
-    static_cast<GLfloat>(WINDOW_HEIGHT), 
-    0.0f,  // Flip top and bottom
-    -1.0f, 1.0f);
+/******************************************************************************/
+/******************************************************************************/
+/* Public Functions                                                           */
+/******************************************************************************/
+/******************************************************************************/
+
 
 // Initialize GLFW and create a window
 GLFWwindow* Engine::InitOpenGL()
@@ -85,13 +116,6 @@ void Engine::WindowResizeCallback(GLFWwindow* window, int width, int height)
     glViewport(0, 0, width, height);
 }
 
-int GetPixelSizeFromPointSize(float pointSize, float dpi = 96.0f)
-{
-    return static_cast<int>(pointSize * (dpi / 72.0f));
-}
-
-float normalizedHeight;
-
 int Engine::InitFreeType()
 {   
     if (FT_Init_FreeType(&ft))
@@ -111,7 +135,7 @@ int Engine::InitFreeType()
     int pixelHeight = GetPixelSizeFromPointSize(pointSize, 96.0f);
     FT_Set_Pixel_Sizes(face, 0, pixelHeight);
 
-    normalizedHeight = face->size->metrics.height / 64.0f; // Convert to float
+    normalizedFaceHeight = face->size->metrics.height / 64.0f; // Convert to float
 
     // Load the first 128 characters of the ASCII set
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1); // Disable byte-alignment restriction
@@ -245,8 +269,6 @@ GLuint Engine::LoadShaders(const char* vertex_file_path, const char* fragment_fi
     return shaderProgram;
 }
 
-std::map<std::string, GLuint> shaders;
-
 void Engine::LoadAllShaders()
 {
     shaders["particle"] = LoadShaders("../data/shaders/particle.vs", "../data/shaders/particle.fs");
@@ -344,7 +366,7 @@ void Engine::RenderText(std::string text, GLfloat x, GLfloat y, GLfloat pointSiz
 
     glBindVertexArray(VAO_text);
 
-    float scaleFactor = pointSize / normalizedHeight;
+    float scaleFactor = pointSize / normalizedFaceHeight;
 
     // Determine the baseline offset (largest Bearing.y in the text)
     GLfloat baselineOffset = 0.0f;
@@ -395,18 +417,10 @@ void Engine::RenderText(std::string text, GLfloat x, GLfloat y, GLfloat pointSiz
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-
-int cursor_state = -1;
-int cursor_state_prev = -1;
-double cursor_window_xpos = -1;
-double cursor_window_ypos = -1;
-
 void Engine::MousePositionCallback(GLFWwindow* window, double xpos, double ypos)
 {
     cursor_window_xpos = xpos;
     cursor_window_ypos = ypos;
-
-    //printf("Cursor: [%.1lf, %.1lf]\r\n", xpos, ypos);
 }
 
 void Engine::MouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
@@ -461,8 +475,6 @@ void Engine::MouseScrollCallback(GLFWwindow* window, double xoffset, double yoff
     }
 }
 
-int massExp = 8;
-
 void Engine::KeyboardCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
     Engine* e = static_cast<Engine*>(glfwGetWindowUserPointer(window));
@@ -489,16 +501,16 @@ void Engine::KeyboardCallback(GLFWwindow* window, int key, int scancode, int act
                         break;
                     }
 
-                    case GLFW_KEY_0: massExp = (isKeyLeftCtrlPressed) ? 10 : 0; break;
-                    case GLFW_KEY_1: massExp = (isKeyLeftCtrlPressed) ? 11 : 1; break;
-                    case GLFW_KEY_2: massExp = (isKeyLeftCtrlPressed) ? 12 : 2; break;
-                    case GLFW_KEY_3: massExp = (isKeyLeftCtrlPressed) ? 13 : 3; break;
-                    case GLFW_KEY_4: massExp = (isKeyLeftCtrlPressed) ? 14 : 4; break;
-                    case GLFW_KEY_5: massExp = (isKeyLeftCtrlPressed) ? 15 : 5; break;
-                    case GLFW_KEY_6: massExp = (isKeyLeftCtrlPressed) ? 16 : 6; break;
-                    case GLFW_KEY_7: massExp = (isKeyLeftCtrlPressed) ? 17 : 7; break;
-                    case GLFW_KEY_8: massExp = (isKeyLeftCtrlPressed) ? 18 : 8; break;
-                    case GLFW_KEY_9: massExp = (isKeyLeftCtrlPressed) ? 19 : 9; break;                    
+                    case GLFW_KEY_0: particleMassExp = (isKeyLeftCtrlPressed) ? 10 : 0; break;
+                    case GLFW_KEY_1: particleMassExp = (isKeyLeftCtrlPressed) ? 11 : 1; break;
+                    case GLFW_KEY_2: particleMassExp = (isKeyLeftCtrlPressed) ? 12 : 2; break;
+                    case GLFW_KEY_3: particleMassExp = (isKeyLeftCtrlPressed) ? 13 : 3; break;
+                    case GLFW_KEY_4: particleMassExp = (isKeyLeftCtrlPressed) ? 14 : 4; break;
+                    case GLFW_KEY_5: particleMassExp = (isKeyLeftCtrlPressed) ? 15 : 5; break;
+                    case GLFW_KEY_6: particleMassExp = (isKeyLeftCtrlPressed) ? 16 : 6; break;
+                    case GLFW_KEY_7: particleMassExp = (isKeyLeftCtrlPressed) ? 17 : 7; break;
+                    case GLFW_KEY_8: particleMassExp = (isKeyLeftCtrlPressed) ? 18 : 8; break;
+                    case GLFW_KEY_9: particleMassExp = (isKeyLeftCtrlPressed) ? 19 : 9; break;                    
 
                     case GLFW_KEY_F: isFrameStepping = true; isSimulationPaused = true; e->simulation->updateParticles(); break;
                     case GLFW_KEY_R: isClearParticles = true; break;
@@ -513,19 +525,19 @@ void Engine::KeyboardCallback(GLFWwindow* window, int key, int scancode, int act
                     case GLFW_KEY_ESCAPE: break;
                     case GLFW_KEY_LEFT_CONTROL: isKeyLeftCtrlPressed = true; break;
 
-                    case GLFW_KEY_KP_0: massExp = (isKeyLeftCtrlPressed) ? 30 : 20; break;
-                    case GLFW_KEY_KP_1: massExp = (isKeyLeftCtrlPressed) ? 31 : 21; break;
-                    case GLFW_KEY_KP_2: massExp = (isKeyLeftCtrlPressed) ? 32 : 22; break;
-                    case GLFW_KEY_KP_3: massExp = (isKeyLeftCtrlPressed) ? 33 : 23; break;
-                    case GLFW_KEY_KP_4: massExp = (isKeyLeftCtrlPressed) ? 34 : 24; break;
-                    case GLFW_KEY_KP_5: massExp = (isKeyLeftCtrlPressed) ? 35 : 25; break;
-                    case GLFW_KEY_KP_6: massExp = (isKeyLeftCtrlPressed) ? 36 : 26; break;
-                    case GLFW_KEY_KP_7: massExp = (isKeyLeftCtrlPressed) ? 37 : 27; break;
-                    case GLFW_KEY_KP_8: massExp = (isKeyLeftCtrlPressed) ? 38 : 28; break;
-                    case GLFW_KEY_KP_9: massExp = (isKeyLeftCtrlPressed) ? 39 : 29; break;
+                    case GLFW_KEY_KP_0: particleMassExp = (isKeyLeftCtrlPressed) ? 30 : 20; break;
+                    case GLFW_KEY_KP_1: particleMassExp = (isKeyLeftCtrlPressed) ? 31 : 21; break;
+                    case GLFW_KEY_KP_2: particleMassExp = (isKeyLeftCtrlPressed) ? 32 : 22; break;
+                    case GLFW_KEY_KP_3: particleMassExp = (isKeyLeftCtrlPressed) ? 33 : 23; break;
+                    case GLFW_KEY_KP_4: particleMassExp = (isKeyLeftCtrlPressed) ? 34 : 24; break;
+                    case GLFW_KEY_KP_5: particleMassExp = (isKeyLeftCtrlPressed) ? 35 : 25; break;
+                    case GLFW_KEY_KP_6: particleMassExp = (isKeyLeftCtrlPressed) ? 36 : 26; break;
+                    case GLFW_KEY_KP_7: particleMassExp = (isKeyLeftCtrlPressed) ? 37 : 27; break;
+                    case GLFW_KEY_KP_8: particleMassExp = (isKeyLeftCtrlPressed) ? 38 : 28; break;
+                    case GLFW_KEY_KP_9: particleMassExp = (isKeyLeftCtrlPressed) ? 39 : 29; break;
                 }
 
-                e->simulation->newParticleMass = powl(10, massExp);
+                e->simulation->newParticleMass = powl(10, particleMassExp);
 
                 printf("Particle [mass: %.1e, velocity: %.2lf]\r\n", e->simulation->newParticleMass, e->simulation->newParticleVelocity);
                 break;
@@ -540,6 +552,31 @@ void Engine::SetSimulation(Simulation* simulation)
 
 int Engine::Init()
 {
+    isKeyLeftAltPressed      = false;
+    isKeyLeftCtrlPressed     = false;
+    isKeyLeftShiftPressed    = false;
+    isCtrlMouseLeftClick     = false;
+    isCtrlMouseLeftClickPrev = false;
+    isClearParticles         = false;
+    isSimulationPaused       = false;
+    isFrameStepping          = false;
+    isShowingUI              = true;
+    particleMassExp          = 8;
+    cursor_state             = -1;
+    cursor_state_prev        = -1;
+    cursor_window_xpos       = -1;
+    cursor_window_ypos       = -1;
+    projection               = glm::ortho(
+        -1.0f, 1.0f,
+        -1.0f, 1.0f,
+        0.1f, 100.0f 
+    );
+    projectionText = glm::ortho(
+        0.0f, static_cast<GLfloat>(WINDOW_WIDTH),
+        static_cast<GLfloat>(WINDOW_HEIGHT), 0.0f,
+        -1.0f, 1.0f
+    );
+
     window = InitOpenGL();
     if (!window) return -1;
 
@@ -662,3 +699,20 @@ void Engine::Run()
         glfwPollEvents();
     }
 }
+
+
+/******************************************************************************/
+/******************************************************************************/
+/* Private Functions                                                          */
+/******************************************************************************/
+/******************************************************************************/
+
+
+int GetPixelSizeFromPointSize(float pointSize, float dpi)
+{
+    return static_cast<int>(pointSize * (dpi / 72.0f));
+}
+
+
+
+/************************END OF FILE************************/
