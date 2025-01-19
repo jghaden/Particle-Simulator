@@ -72,6 +72,8 @@ int GetPixelSizeFromPointSize(float pointSize, float dpi = 96.0f);
 // Initialize GLFW and create a window
 GLFWwindow* Engine::InitOpenGL()
 {
+    LOG_INFO("Starting OpenGL");
+
     if (!glfwInit())
     {
         LOG_FATAL("Failed to initialize GLFW");
@@ -92,6 +94,8 @@ GLFWwindow* Engine::InitOpenGL()
     GLFWwindow* window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "Particle Simulator", nullptr, nullptr);
     glfwSetWindowPos(window, (screen_width - WINDOW_WIDTH) / 2, (screen_height - WINDOW_HEIGHT) / 2);
 
+    LOG_INFO("Creating GLFW window");
+
     if (!window)
     {
         LOG_FATAL("Failed to create GLFW window");
@@ -99,8 +103,12 @@ GLFWwindow* Engine::InitOpenGL()
         return nullptr;
     }
 
+    LOG_SUCCESS("GLFW window created");
+
     glfwMakeContextCurrent(window);
     glfwSetWindowUserPointer(window, this);
+
+    LOG_INFO("Starting GLEW");
 
     if (glewInit() != GLEW_OK)
     {
@@ -108,8 +116,12 @@ GLFWwindow* Engine::InitOpenGL()
         return nullptr;
     }
 
+    LOG_SUCCESS("GLEW started");
+
     glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
     glEnable(GL_PROGRAM_POINT_SIZE);
+
+    LOG_SUCCESS("OpenGL started");
 
     return window;
 }
@@ -670,7 +682,7 @@ void Engine::SetSimulation(Simulation* simulation)
 
 int Engine::Init()
 {
-    LOG_INFO("Engine starting");
+    LOG_INFO("Starting engine");
 
     this->window_width = WINDOW_WIDTH;
     this->window_height = WINDOW_HEIGHT;
