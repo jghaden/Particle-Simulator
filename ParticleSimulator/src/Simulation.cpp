@@ -41,6 +41,8 @@ Simulation::Simulation(Engine* engine, SimulationTemplate simulationTemplate)
     this->engine->SetSimulation(this);
 
     this->particles = nullptr;
+    this->timestep = TIME_STEP;
+    this->totalMass = 0.0;
 
     this->simulationTemplate = simulationTemplate;
 
@@ -53,6 +55,11 @@ Simulation::Simulation(Engine* engine, SimulationTemplate simulationTemplate)
 void Simulation::SetParticles(Particles* particles)
 {
     this->particles = particles;
+}
+
+void Simulation::SetTimeStep(double timestep)
+{
+    this->timestep = timestep;
 }
 
 void Simulation::initializeParticles()
@@ -142,7 +149,7 @@ void Simulation::initializeParticles()
 
 void Simulation::update()
 {
-    this->simulationTime += TIME_STEP;
+    this->simulationTime += this->getTimeStep();
 }
 
 void Simulation::updateParticles()
@@ -194,8 +201,8 @@ void Simulation::updateParticles()
             pI.acceleration = force / pI.mass;
             pJ.acceleration = force / pJ.mass;
 
-            pI.velocity += pI.acceleration * TIME_STEP;
-            pJ.velocity -= pJ.acceleration * TIME_STEP;
+            pI.velocity += pI.acceleration * this->getTimeStep();
+            pJ.velocity -= pJ.acceleration * this->getTimeStep();
 
             /*
             Collision detection and response
@@ -321,6 +328,11 @@ size_t Simulation::getMaxParticleCount()
 double Simulation::getTotalMass()
 {
     return this->totalMass;
+}
+
+double Simulation::getTimeStep()
+{
+    return this->timestep;
 }
 
 

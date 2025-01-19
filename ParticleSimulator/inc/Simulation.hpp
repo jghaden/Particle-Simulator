@@ -28,7 +28,7 @@
 const bool   BOUNDING_BOX = false;
 const int    NUM_PARTICLES = 2'000;
 const int    MAX_NUM_PARTICLES = 3'000;
-const double TIME_STEP = 0.002;
+const double TIME_STEP = 1e-3;
 const double MAX_PARTICLE_COLOR_SPEED = 10.0;
 const double M_PI = 3.1415926536;
 const double GRAVITATIONAL_CONSTANT = 6.6743e-11;
@@ -70,10 +70,12 @@ class Simulation
 {
 private:
     double totalMass;
+    double timestep;
 public:
     Simulation(Engine* engine, SimulationTemplate simulationTemplate = SimulationTemplate::Empty);
 
     void SetParticles(Particles* particles);
+    void SetTimeStep(double step);
 
     void initializeParticles();
 
@@ -87,6 +89,7 @@ public:
 
     size_t getParticleCount();
     size_t getMaxParticleCount();
+    double getTimeStep();
     double getTotalMass();
 
     int particleBrushSize;
