@@ -166,6 +166,8 @@ glfw3.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     <ClCompile Include="src\Utility.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="data\shaders\circle.fs" />
+    <None Include="data\shaders\circle.vs" />
     <None Include="data\shaders\particle.fs" />
     <None Include="data\shaders\text.fs" />
     <None Include="data\shaders\text.vs" />
