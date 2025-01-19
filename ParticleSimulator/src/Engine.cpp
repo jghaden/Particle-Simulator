@@ -48,7 +48,7 @@ static std::chrono::system_clock::time_point tp1;
 static std::chrono::system_clock::time_point tp2;
 static FT_Face                               face;
 static FT_Library                            ft;
-static GLuint                                VAO;
+static GLuint                                VAO_particles;
 static GLuint                                VAO_text;
 static GLuint                                VBO_colors;
 static GLuint                                VBO_positions;
@@ -606,7 +606,7 @@ int Engine::Init()
     GLuint shaderParticle = GetShader("particle");
     GLuint shaderText = GetShader("text");
 
-    SetupParticleBuffers(VAO, VBO_positions, VBO_colors, this->simulation->getMaxParticleCount());
+    SetupParticleBuffers(VAO_particles, VBO_positions, VBO_colors, this->simulation->getMaxParticleCount());
     SetupTextBuffers(VAO_text, VBO_text);
 
     glUseProgram(shaderParticle);
@@ -633,7 +633,9 @@ int Engine::Init()
 
     glDeleteBuffers(1, &VBO_positions);
     glDeleteBuffers(1, &VBO_colors);
-    glDeleteVertexArrays(1, &VAO);
+    glDeleteBuffers(1, &VBO_text);
+    glDeleteVertexArrays(1, &VAO_particles);
+    glDeleteVertexArrays(1, &VAO_text);
     glDeleteProgram(shaderParticle);
     glDeleteProgram(shaderText);
 
@@ -701,7 +703,7 @@ void Engine::Run()
         // Render particles
         glDisable(GL_BLEND);
         glUseProgram(shaderParticle);
-        RenderParticles(VAO, particles.size());
+        RenderParticles(VAO_particles, particles.size());
 
         // Render text
         if (isShowingUI)
