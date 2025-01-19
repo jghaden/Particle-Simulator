@@ -494,11 +494,9 @@ void Engine::KeyboardCallback(GLFWwindow* window, int key, int scancode, int act
                 break;
             case GLFW_PRESS:
                 switch (key)
-                {
-                    
+                {                    
                     case GLFW_KEY_SPACE:
                     {
-                        printf("Simulation %s\r\n", !isSimulationPaused ? "paused" : "resumed");
                         isSimulationPaused = !isSimulationPaused;
                         isFrameStepping = false;
                         break;
@@ -541,8 +539,6 @@ void Engine::KeyboardCallback(GLFWwindow* window, int key, int scancode, int act
                 }
 
                 e->simulation->newParticleMass = powl(10, particleMassExp);
-
-                printf("Particle [mass: %.1e, velocity: %.2lf]\r\n", e->simulation->newParticleMass, e->simulation->newParticleVelocity);
                 break;
         }
     }
