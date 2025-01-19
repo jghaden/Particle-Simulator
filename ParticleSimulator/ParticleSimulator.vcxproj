@@ -154,6 +154,7 @@ glfw3.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     <ClCompile Include="src\Engine.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Use</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="src\Font.cpp" />
     <ClCompile Include="src\ParticleSimulator.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
@@ -175,6 +176,7 @@ glfw3.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="inc\Engine.hpp" />
+    <ClInclude Include="inc\Font.h" />
     <ClInclude Include="inc\Particle.hpp" />
     <ClInclude Include="inc\PCH.hpp" />
     <ClInclude Include="inc\Simulation.hpp" />
