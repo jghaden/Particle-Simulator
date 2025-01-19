@@ -854,17 +854,21 @@ void Engine::Run()
             sprintf_s(textBuffer, "%lld", this->simulation->getParticleCount());
             RenderText(textBuffer, 90.0f, 10.0f, 20.0f, FONT_T::RobotoLight, glm::vec3(1.0f));
 
+            RenderText("Mass:", 10.0f, 30.0f, 20.0f, FONT_T::RobotoBold, glm::vec3(1.0f));
+            sprintf_s(textBuffer, "%.0e kg", this->simulation->getTotalMass());
+            RenderText(textBuffer, 90.0f, 30.0f, 20.0f, FONT_T::RobotoLight, glm::vec3(1.0f));
+
             RenderText("FPS:", this->GetWindowWidth() - 80.0f, 10, 18.0f, FONT_T::RobotoBold, glm::vec3(1.0f, 1.0, 0.0f));
             sprintf_s(textBuffer, "%ld", (int)(1.0f / fElapsedTime));
             RenderText(textBuffer, this->GetWindowWidth() - 40.0f, 10, 18.0f, FONT_T::RobotoLight, glm::vec3(1.0f, 1.0, 0.0f));
             
             RenderText("Mass:", 10.0f, this->GetWindowHeight() - 70.0f, 18.0f, FONT_T::RobotoBold, glm::vec3(0.61f, 0.85f, 0.9f));
             sprintf_s(textBuffer, "%.0e kg", this->simulation->newParticleMass);
-            RenderText(textBuffer, 60.0f, this->GetWindowHeight() - 70.0f, 18.0f, FONT_T::RobotoLight, glm::vec3(0.61f, 0.85f, 0.9f));
+            RenderText(textBuffer, 95.0f, this->GetWindowHeight() - 70.0f, 18.0f, FONT_T::RobotoLight, glm::vec3(0.61f, 0.85f, 0.9f));
 
             RenderText("Velocity:", 10.0f, this->GetWindowHeight() - 50.0f, 18.0f, FONT_T::RobotoBold, glm::vec3(0.61f, 0.85f, 0.9f));
             sprintf_s(textBuffer, "%.0lf m/s", this->simulation->newParticleVelocity);
-            RenderText(textBuffer, 80.0f, this->GetWindowHeight() - 50.0f, 18.0f, FONT_T::RobotoLight, glm::vec3(0.61f, 0.85f, 0.9f));
+            RenderText(textBuffer, 95.0f, this->GetWindowHeight() - 50.0f, 18.0f, FONT_T::RobotoLight, glm::vec3(0.61f, 0.85f, 0.9f));
 
             RenderText("Brush size:", 10.0f, this->GetWindowHeight() - 30.0f, 18.0f, FONT_T::RobotoBold, glm::vec3(0.61f, 0.85f, 0.9f));
             sprintf_s(textBuffer, "%d", this->simulation->particleBrushSize);
