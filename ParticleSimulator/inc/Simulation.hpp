@@ -2,8 +2,8 @@
   ******************************************************************************
   * @file    Simulation.hpp
   * @author  Josh Haden
-  * @version V0.0.1
-  * @date    18 JAN 2025
+  * @version V0.1.0
+  * @date    19 JAN 2025
   * @brief   Header for Simulation.cpp
   ******************************************************************************
   * @attention
@@ -12,37 +12,21 @@
   ******************************************************************************
   */
 
-/* Define to prevent recursive inclusion -------------------------------------*/
+/* Define to prevent recursive inclusion ------------------------------------ */
 #ifndef __SIMULATION_HPP
 #define __SIMULATION_HPP
 
-/* Includes ------------------------------------------------------------------*/
+/* Includes ----------------------------------------------------------------- */
 
 #include "PCH.hpp"
 
 #include "Engine.hpp"
 
-/* Exported types ------------------------------------------------------------*/
-/* Exported constants --------------------------------------------------------*/
+/* Exported types ----------------------------------------------------------- */
 
-const bool   BOUNDING_BOX = false;
-const int    NUM_PARTICLES = 2'000;
-const int    MAX_NUM_PARTICLES = 3'000;
-const double TIME_STEP = 1e-3;
-const double MAX_PARTICLE_COLOR_SPEED = 10.0;
-const double M_PI = 3.1415926536;
-const double GRAVITATIONAL_CONSTANT = 6.6743e-11;
-const double MIN_DISTANCE = 2.0;                    // Minimum distance to prevent collapse
-const double SOFTENING = 1.0;                       // Softening factor to prevent extreme forces
-const double DAMPING = 1.0;                         // Velocity damping factor
-const double COLLISION_DAMPING = 0.75;              // Collision response damping
-const double PARTICLE_RADIUS = 0.0055;              // Radius of each particle for collision detection
-const double REPULSION_FACTOR = 1.05;
-
-/* Exported macro ------------------------------------------------------------*/
-/* Exported variables --------------------------------------------------------*/
-/* Exported functions ------------------------------------------------------- */
-/* Class definition --------------------------------------------------------- */
+typedef unsigned int          QuadNum;
+typedef glm::dvec2            Vec2D;
+typedef std::vector<Particle> Particles;
 
 enum SimulationTemplate
 {
@@ -60,51 +44,93 @@ enum SimulationTemplate
     BinaryStar
 };
 
+/* Exported constants ------------------------------------------------------- */
+
+constexpr bool   BOUNDING_BOX             = false;          // Flag to toggle whether or not to keep particles within viewport
+constexpr int    MAX_NUM_PARTICLES        = 3'000;          // Max number of particles that can be in the simulation
+constexpr int    NUM_TEMPLATE_PARTICLES   = 2'000;          // Number of particles to create for templates
+constexpr double COLLISION_DAMPING        = 0.75;           // Collision response damping
+constexpr double DAMPING_FACTOR           = 1.0;            // Velocity damping factor
+constexpr double MATH_PI_CONSTANT         = 3.1415926536;   // Mathmatical constant - pi
+constexpr double MAX_PARTICLE_COLOR_SPEED = 10.0;           // Upper bounds for speed to determine how to color a particle
+constexpr double MIN_INTERACTION_DISTANCE = 2.0;            // Minimum distance to prevent collapse
+constexpr double GRAVITATIONAL_CONSTANT   = 6.6743e-11;     // Physics constant - G
+constexpr double PARTICLE_RADIUS          = 0.0055;         // Radius of each particle for collision detection
+constexpr double REPULSION_FACTOR         = 1.05;           // Basic repulsion force to apply when particles collide
+constexpr double SOFTENING                = 1.0;            // Softening factor to prevent extreme forces
+constexpr double TIME_STEP                = 1e-3;           // Time in seconds to step through the simulation
+
+/* Exported macro ----------------------------------------------------------- */
+/* Exported variables ------------------------------------------------------- */
+/* Exported functions ------------------------------------------------------- */
+/* Forward declarations ----------------------------------------------------- */
+
 class Particle;
 
-typedef std::vector<Particle> Particles;
-typedef unsigned int QuadNum;
-typedef glm::dvec2 Vec2D;
+/* Class definition --------------------------------------------------------- */
 
 class Simulation
 {
-private:
-    double totalMass;
-    double timestep;
 public:
+    /* Public member variables -------------------------------------------------- */
+    /* Public member functions -------------------------------------------------- */
+
     Simulation(Engine* engine, SimulationTemplate simulationTemplate = SimulationTemplate::Empty);
 
+    void Init();
+    void InitTemplateParticles();
+
+    void AddParticle(glm::dvec2 position);
+    void AddParticles(glm::dvec2 position);
+    void RemoveAllParticles();
+    void RemoveParticle(glm::dvec2 position);
+    void Update();
+    void UpdateParticles();
+
+    /* Getters ------------------------------------------------------------------ */
+
+    int GetParticleBrushSize() const;
+    size_t GetMaxParticleCount() const;
+    size_t GetParticleCount() const;
+    double GetNewParticleMass() const;
+    double GetNewParticleVelocity() const;
+    double GetSimulationTime() const;
+    double GetTimeStep() const;
+    double GetTotalMass() const;
+    SimulationTemplate GetSimulationTemplate() const;
+    Particles* GetParticles() const;
+    Engine* GetEngine() const;
+
+    /* Setters ------------------------------------------------------------------ */
+
+    void SetMaxParticleCount(size_t count);
+    void SetNewParticleMass(double mass);
+    void SetNewParticleVelocity(double velocity);
     void SetParticles(Particles* particles);
-    void SetTimeStep(double step);
+    void SetParticleBrushSize(int size);
+    void SetSimulationTemplate(SimulationTemplate simulationTemplate = SimulationTemplate::Empty);
+    void SetTimeStep(double timeStep);
+private:
+    /* Private member variables ------------------------------------------------- */
 
-    void initializeParticles();
-
-    void update();
-    void updateParticles();
-
-    void addParticle(glm::dvec2 pos);
-    void addParticles(glm::dvec2 pos);
-    void removeParticle(glm::dvec2 pos);
-    void removeAllParticles();
-
-    size_t getParticleCount();
-    size_t getMaxParticleCount();
-    double getTimeStep();
-    double getTotalMass();
-
-    int particleBrushSize;
-    double newParticleVelocity;
-    double newParticleMass;
-    double simulationTime;
-
-    Engine* engine;
-    Particles* particles;
-
+    int                particleBrushSize;
+    size_t             maxParticleCount;
+    double             newParticleMass;
+    double             newParticleVelocity;
+    double             simulationTime;
+    double             timeStep;
+    double             totalMass;
     SimulationTemplate simulationTemplate;
+    Particles*         particles;
+    Engine*            engine;
+
+    /* Private member functions ------------------------------------------------- */
+    /* Getters ------------------------------------------------------------------ */
+    /* Setters ------------------------------------------------------------------ */
 };
 
 
 
 #endif /* __SIMULATION_HPP */
 
-/************************END OF FILE************************/
+/******************************** END OF FILE *********************************/

@@ -107,11 +107,9 @@ private:
     static void MousePositionCallback(GLFWwindow* window, double xpos, double ypos);
     static void MouseScrollCallback(GLFWwindow* window, double xoffset, double yoffset);
     static void WindowResizeCallback(GLFWwindow* window, int width, int height);
-
-    /* Getters ------------------------------------------------------------------ */
-
     int GetPixelSizeFromPointSize(float pointSize, float dpi) const;
 
+    /* Getters ------------------------------------------------------------------ */
     /* Setters ------------------------------------------------------------------ */
 };
 

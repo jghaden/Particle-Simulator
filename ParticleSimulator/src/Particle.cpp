@@ -78,7 +78,7 @@ void Particle::updateColor()
 void Particle::update()
 {
     position += velocity * TIME_STEP;
-    velocity *= DAMPING;
+    velocity *= DAMPING_FACTOR;
 
     updateColor();
 }
