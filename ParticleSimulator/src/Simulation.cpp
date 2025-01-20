@@ -1,6 +1,6 @@
 /**
   ******************************************************************************
-  * @file    Particle.cpp
+  * @file    Simulation.cpp
   * @author  Josh Haden
   * @version V0.1.0
   * @date    19 JAN 2025
