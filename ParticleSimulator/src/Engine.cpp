@@ -937,8 +937,8 @@ void Engine::KeyboardCallback(GLFWwindow* window, int key, int scancode, int act
                     break;
                 }
 
-                case GLFW_KEY_COMMA: timeStepExp -= 1; break;
-                case GLFW_KEY_PERIOD: timeStepExp += 1; break;
+                case GLFW_KEY_COMMA: timeStepExp += 1; break;
+                case GLFW_KEY_PERIOD: timeStepExp -= 1; break;
 
                 case GLFW_KEY_0: particleMassExp = (isKeyLeftCtrlPressed) ? 10 : 0; break;
                 case GLFW_KEY_1: particleMassExp = (isKeyLeftCtrlPressed) ? 11 : 1; break;
