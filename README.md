@@ -2,6 +2,12 @@
 
 A particle simulator written in C++ using **GLFW**, **GLEW**, and **GLM**.
 
+# Overview
+
+1. [Preview](#preview)
+2. [Controls](#controls)
+3. [License](#license)
+
 ---
 
 ## Preview
@@ -12,7 +18,7 @@ Screenshot:
 
 Demo:
 
-![Particle Simulator Video](preview/demo.mp4)
+![Particle Simulator Video](preview/demo.gif)
 
 ---
 
