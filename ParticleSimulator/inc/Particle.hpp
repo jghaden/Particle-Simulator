@@ -2,8 +2,8 @@
   ******************************************************************************
   * @file    Particle.hpp
   * @author  Josh Haden
-  * @version V0.0.1
-  * @date    18 JAN 2025
+  * @version V0.1.0
+  * @date    20 JAN 2025
   * @brief   Header for Particle.cpp
   ******************************************************************************
   * @attention
@@ -12,47 +12,73 @@
   ******************************************************************************
   */
 
-/* Define to prevent recursive inclusion -------------------------------------*/
+/* Define to prevent recursive inclusion ------------------------------------ */
 #ifndef __PARTICLE_HPP
 #define __PARTICLE_HPP
 
-/* Includes ------------------------------------------------------------------*/
+/* Includes ----------------------------------------------------------------- */
 
 #include "PCH.hpp"
 
-/* Exported types ------------------------------------------------------------*/
-/* Exported constants --------------------------------------------------------*/
-/* Exported macro ------------------------------------------------------------*/
-/* Exported variables --------------------------------------------------------*/
+/* Exported types ----------------------------------------------------------- */
+
+typedef std::vector<std::pair<float, glm::vec3>> COLOR_GRADIENT_T;
+
+/* Exported constants ------------------------------------------------------- */
+/* Exported macro ----------------------------------------------------------- */
+/* Exported variables ------------------------------------------------------- */
 /* Exported functions ------------------------------------------------------- */
-
-glm::vec3 interpolateColor(float t, const std::vector<std::pair<float, glm::vec3>>& colorStops);
-glm::vec3 calculateColor(const glm::dvec2& velocity);
-
+/* Forward declarations ----------------------------------------------------- */
 /* Class definition --------------------------------------------------------- */
 
 class Particle
 {
 public:
-    glm::dvec2 position;
-    glm::dvec2 velocity;
-    glm::dvec2 acceleration;
-    glm::vec3 color;
-    double mass;
-    float age;
+    /* Public member variables -------------------------------------------------- */
+    /* Public member functions -------------------------------------------------- */
 
     Particle();
-    Particle(glm::dvec2 position, glm::dvec2 velocity, double mass);
+    Particle(double mass, glm::dvec2 position, glm::dvec2 velocity);
 
-    glm::vec3 interpolateColor(float t, const std::vector<std::pair<float, glm::vec3>>& colorStops);
+    void Init();
+    void Update();
+    void UpdateColor();
+    glm::vec3 CalculateColor();
 
-    void updateColor();
+    /* Getters ------------------------------------------------------------------ */
 
-    void update();
+    double GetAge() const;
+    double GetMass() const;
+    glm::dvec2 GetAcceleration() const;
+    glm::dvec2 GetPosition() const;
+    glm::dvec2 GetVelocity() const;
+    glm::vec3 GetColor() const;
+
+    /* Setters ------------------------------------------------------------------ */
+
+    void SetAcceleration(glm::dvec2 acceleration);
+    void SetAge(double age);
+    void SetColor(glm::vec3 color);
+    void SetMass(double mass);
+    void SetPosition(glm::dvec2 position);
+    void SetVelocity(glm::dvec2 velocity);
+private:
+    /* Private member variables ------------------------------------------------- */
+
+    double     age;
+    double     mass;
+    glm::dvec2 acceleration;
+    glm::dvec2 position;
+    glm::dvec2 velocity;
+    glm::vec3  color;
+
+    /* Private member functions ------------------------------------------------- */
+    /* Getters ------------------------------------------------------------------ */
+    /* Setters ------------------------------------------------------------------ */
 };
 
 
 
 #endif /* __PARTICLE_HPP */
 
-/************************END OF FILE************************/
+/******************************** END OF FILE *********************************/

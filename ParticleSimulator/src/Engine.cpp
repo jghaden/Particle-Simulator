@@ -699,11 +699,11 @@ void Engine::UpdateParticleBuffers(const std::vector<Particle>& particles)
 
     for (const auto& p : particles)
     {
-        positions.push_back(static_cast<GLfloat>(p.position.x));
-        positions.push_back(static_cast<GLfloat>(p.position.y));
-        colors.push_back(p.color.r);
-        colors.push_back(p.color.g);
-        colors.push_back(p.color.b);
+        positions.push_back(static_cast<GLfloat>(p.GetPosition().x));
+        positions.push_back(static_cast<GLfloat>(p.GetPosition().y));
+        colors.push_back(p.GetColor().r);
+        colors.push_back(p.GetColor().g);
+        colors.push_back(p.GetColor().b);
     }
 
     glBindBuffer(GL_ARRAY_BUFFER, VBOParticlePositions);
