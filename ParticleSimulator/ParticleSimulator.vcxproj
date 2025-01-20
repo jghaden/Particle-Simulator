@@ -176,7 +176,7 @@ glfw3.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="inc\Engine.hpp" />
-    <ClInclude Include="inc\Font.h" />
+    <ClInclude Include="inc\Font.hpp" />
     <ClInclude Include="inc\Particle.hpp" />
     <ClInclude Include="inc\PCH.hpp" />
     <ClInclude Include="inc\Simulation.hpp" />

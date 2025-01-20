@@ -33,6 +33,8 @@
     <None Include="data\shaders\particle.fs">
       <Filter>Data\shaders</Filter>
     </None>
+    <None Include="data\shaders\circle.fs" />
+    <None Include="data\shaders\circle.vs" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Engine.cpp">
@@ -48,6 +50,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\Utility.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Font.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -67,5 +72,21 @@
     <ClInclude Include="inc\Utility.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="inc\Font.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="resource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="ParticleSimulator.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="data\img\icon.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
   </ItemGroup>
 </Project>
