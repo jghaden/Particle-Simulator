@@ -2,7 +2,7 @@
   ******************************************************************************
   * @file    ParticleSimulator.cpp
   * @author  Josh Haden
-  * @version V0.0.1
+  * @version V0.1.0
   * @date    18 JAN 2025
   * @brief
   ******************************************************************************
@@ -12,7 +12,7 @@
   ******************************************************************************
   */
 
-/* Includes ------------------------------------------------------------------*/
+/* Includes ----------------------------------------------------------------- */
 
 #include "PCH.hpp"
 
@@ -20,12 +20,12 @@
 #include "Simulation.hpp"
 #include "Particle.hpp"
 
-/* Global Variables ----------------------------------------------------------*/
-/* Private typedef -----------------------------------------------------------*/
-/* Private define ------------------------------------------------------------*/
-/* Private macro -------------------------------------------------------------*/
-/* Private variables ---------------------------------------------------------*/
-/* Private function prototypes -----------------------------------------------*/
+/* Global Variables --------------------------------------------------------- */
+/* Private typedef ---------------------------------------------------------- */
+/* Private define ----------------------------------------------------------- */
+/* Private macro ------------------------------------------------------------ */
+/* Private variables -------------------------------------------------------- */
+/* Private function prototypes ---------------------------------------------- */
 
 
 
@@ -38,10 +38,13 @@
 
 /**
   * @brief  Main program
-  * @param  None
-  * @retval None
+  * @param  _In_ HINSTANCE hInstance
+  * @param  _In_opt_ HINSTANCE hPrevInstance
+  * @param  _In_ LPSTR lpCmdLine
+  * @param  _In_ int nShowCmd
+  * @retval int
   */
-int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPSTR lpCmdLine, _In_ int nCmdShow)
+int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPSTR lpCmdLine, _In_ int nShowCmd)
 {
     // Parse command-line arguments
     std::string cmdLine(lpCmdLine);
@@ -56,7 +59,10 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
     Simulation sim(&e);
 
     sim.engine->Init();
+
+    return 0;
 }
+
 
 /******************************************************************************/
 /******************************************************************************/
@@ -66,4 +72,4 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 
 
 
-/************************END OF FILE************************/
+/******************************** END OF FILE *********************************/
