@@ -24,7 +24,7 @@ Demo:
 
 ## Controls
 
-- **Mouse Controls**:
+- **Mouse Controls:**
 
   - `Left mouse click`: Add particles
   - `Right mouse click`: Remove particles
@@ -32,7 +32,7 @@ Demo:
   - `Mouse wheel down`: Decrease brush size
   - `Mouse wheel up`: Increase brush size
 
-- **Keyboard Controls**:
+- **Keyboard Controls:**
 
   - `[` : Decrease brush size
   - `]` : Increase brush size
@@ -43,15 +43,12 @@ Demo:
   - `Space` : Pause/Resume simulation
   - `Comma (,)` : Slow down time
   - `Period (.)` : Speed up time
-
-- **Mass Exponent Controls**:
-
-  - `0-9` : Mass exponent (10^0 - 10^9)
-  - `Ctrl + 0-9` : Mass exponent (10^10 - 10^19)
-  - `Numpad 0-9` : Mass exponent (10^20 - 10^29)
-  - `Ctrl + Numpad 0-9` : Mass exponent (10^30 - 10^39)
-
-- **Other Controls**:
+  - **Particle mass:**
+    -  `0-9` : 10<sup>0</sup> to 10<sup>9</sup> Kg
+    - `Ctrl + 0-9` : 10<sup>10</sup> to 10<sup>19</sup> Kg
+    - `Numpad 0-9` : 10<sup>20</sup> to 10<sup>29</sup> Kg
+    - `Ctrl + Numpad 0-9` : 10<sup>30</sup> to 10<sup>39</sup> Kg
+ 
   - `F1` : Toggle UI
   - `ESC` : Exit program
 
