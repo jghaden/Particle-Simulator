@@ -1122,7 +1122,7 @@ void Engine::WindowResizeCallback(GLFWwindow* window, int width, int height)
   * @brief  Convert point size to pixels
   * @param  pointSize
   * @param  dpi
-  * @retval None
+  * @retval int
   */
 int Engine::GetPixelSizeFromPointSize(float pointSize, float dpi) const
 {
