@@ -962,7 +962,7 @@ void Engine::KeyboardCallback(GLFWwindow* window, int key, int scancode, int act
 
                 case GLFW_KEY_F1: isShowingUI = !isShowingUI; break;
 
-                case GLFW_KEY_ESCAPE: break;
+                case GLFW_KEY_ESCAPE: Exit(0);  break;
                 case GLFW_KEY_LEFT_CONTROL: isKeyLeftCtrlPressed = true; break;
 
                 case GLFW_KEY_KP_0: particleMassExp = (isKeyLeftCtrlPressed) ? 30 : 20; break;

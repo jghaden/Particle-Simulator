@@ -35,6 +35,19 @@
 
 
 /**
+  * @brief  Exit program
+  * @param  code
+  * @retval None
+  */
+void Exit(int code)
+{
+    LOG_INFO("Exiting program: %d", code);
+
+    exit(code);
+}
+
+
+/**
   * @brief  Show console window with ANSI support
   * @param  None
   * @retval None
