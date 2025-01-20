@@ -359,7 +359,7 @@ void Simulation::UpdateParticles()
         /*
         Update the particle properties
         */
-        pI.Update();
+        pI.Update(this->GetTimeStep());
     }
 }
 

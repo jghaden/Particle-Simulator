@@ -41,7 +41,7 @@ public:
     Particle(double mass, glm::dvec2 position, glm::dvec2 velocity);
 
     void Init();
-    void Update();
+    void Update(double timeStep);
     void UpdateColor();
     glm::vec3 CalculateColor();
 

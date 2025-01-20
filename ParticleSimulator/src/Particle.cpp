@@ -95,10 +95,12 @@ void Particle::Init()
   * @param  None
   * @retval None
   */
-void Particle::Update()
+void Particle::Update(double timeStep)
 {
-    position += velocity * TIME_STEP;
+    velocity += acceleration * timeStep;
     velocity *= DAMPING_FACTOR;
+    position += velocity * timeStep;
+    acceleration = glm::dvec2(0.0);
 
     UpdateColor();
 }
