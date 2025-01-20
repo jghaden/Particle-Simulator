@@ -20,7 +20,7 @@
 
 #include "PCH.hpp"
 
-#include "Font.h"
+#include "Font.hpp"
 
 /* Exported types ----------------------------------------------------------- */
 
@@ -47,7 +47,6 @@ const int WINDOW_HEIGHT = 1024;     // Initial height of window
 /* Exported macro ----------------------------------------------------------- */
 /* Exported variables ------------------------------------------------------- */
 /* Exported functions ------------------------------------------------------- */
-
 /* Forward declarations ----------------------------------------------------- */
 
 class Particle;
