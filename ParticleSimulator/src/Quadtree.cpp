@@ -1,6 +1,6 @@
 /**
   ******************************************************************************
-  * @file    Particle.cpp
+  * @file    Quadtree.cpp
   * @author  Josh Haden
   * @version V0.1.0
   * @date    20 JAN 2025
