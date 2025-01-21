@@ -49,15 +49,15 @@ enum SimulationTemplate
 
 constexpr bool   ENABLE_BOUNDING_BOX      = true;           // Flag to toggle whether or not to keep particles within viewport
 constexpr int    MAX_NUM_PARTICLES        = 50'000;         // Max number of particles that can be in the simulation
-constexpr int    NUM_TEMPLATE_PARTICLES   = 2'000;         // Number of particles to create for templates
-constexpr double COLLISION_DAMPING        = 0.75;           // Collision response damping
+constexpr int    NUM_TEMPLATE_PARTICLES   = 2'000;          // Number of particles to create for templates
+constexpr double COLLISION_DAMPING        = 0.0;            // Collision response damping
 constexpr double DAMPING_FACTOR           = 1.0;            // Velocity damping factor
 constexpr double MATH_PI_CONSTANT         = 3.1415926536;   // Mathmatical constant - pi
 constexpr double MAX_PARTICLE_COLOR_SPEED = 10.0;           // Upper bounds for speed to determine how to color a particle
 constexpr double MIN_INTERACTION_DISTANCE = 2.0;            // Minimum distance to prevent collapse
 constexpr double GRAVITATIONAL_CONSTANT   = 6.6743e-11;     // Physics constant - G
 constexpr double PARTICLE_RADIUS          = 0.0055;         // Radius of each particle for collision detection
-constexpr double REPULSION_FACTOR         = 1.05;           // Basic repulsion force to apply when particles collide
+constexpr double REPULSION_FACTOR         = 1.00;           // Basic repulsion force to apply when particles collide
 constexpr double SOFTENING                = 1.0;            // Softening factor to prevent extreme forces
 constexpr double TIME_STEP                = 1e-3;           // Time in seconds to step through the simulation
 
