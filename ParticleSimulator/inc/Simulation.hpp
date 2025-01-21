@@ -21,6 +21,7 @@
 #include "PCH.hpp"
 
 #include "Engine.hpp"
+#include "Particle.hpp"
 
 /* Exported types ----------------------------------------------------------- */
 
@@ -46,9 +47,9 @@ enum SimulationTemplate
 
 /* Exported constants ------------------------------------------------------- */
 
-constexpr bool   BOUNDING_BOX             = false;          // Flag to toggle whether or not to keep particles within viewport
-constexpr int    MAX_NUM_PARTICLES        = 3'000;          // Max number of particles that can be in the simulation
-constexpr int    NUM_TEMPLATE_PARTICLES   = 2'000;          // Number of particles to create for templates
+constexpr bool   ENABLE_BOUNDING_BOX      = true;           // Flag to toggle whether or not to keep particles within viewport
+constexpr int    MAX_NUM_PARTICLES        = 50'000;         // Max number of particles that can be in the simulation
+constexpr int    NUM_TEMPLATE_PARTICLES   = 2'000;         // Number of particles to create for templates
 constexpr double COLLISION_DAMPING        = 0.75;           // Collision response damping
 constexpr double DAMPING_FACTOR           = 1.0;            // Velocity damping factor
 constexpr double MATH_PI_CONSTANT         = 3.1415926536;   // Mathmatical constant - pi
@@ -64,9 +65,6 @@ constexpr double TIME_STEP                = 1e-3;           // Time in seconds t
 /* Exported variables ------------------------------------------------------- */
 /* Exported functions ------------------------------------------------------- */
 /* Forward declarations ----------------------------------------------------- */
-
-class Particle;
-
 /* Class definition --------------------------------------------------------- */
 
 class Simulation
