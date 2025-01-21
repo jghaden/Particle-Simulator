@@ -91,10 +91,10 @@ public:
     size_t GetMaxParticleCount() const;
     size_t GetParticleCount() const;
     double GetNewParticleMass() const;
-    double GetNewParticleVelocity() const;
     double GetSimulationTime() const;
     double GetTimeStep() const;
     double GetTotalMass() const;
+    glm::vec2 GetNewParticleVelocity() const;
     SimulationTemplate GetSimulationTemplate() const;
     Particles* GetParticles() const;
     Engine* GetEngine() const;
@@ -103,7 +103,7 @@ public:
 
     void SetMaxParticleCount(size_t count);
     void SetNewParticleMass(double mass);
-    void SetNewParticleVelocity(double velocity);
+    void SetNewParticleVelocity(glm::vec2 velocity);
     void SetParticles(Particles* particles);
     void SetParticleBrushSize(int size);
     void SetSimulationTemplate(SimulationTemplate simulationTemplate = SimulationTemplate::Empty);
@@ -114,10 +114,10 @@ private:
     int                particleBrushSize;
     size_t             maxParticleCount;
     double             newParticleMass;
-    double             newParticleVelocity;
     double             simulationTime;
     double             timeStep;
     double             totalMass;
+    glm::vec2          newParticleVelocity;
     SimulationTemplate simulationTemplate;
     Particles*         particles;
     Engine*            engine;

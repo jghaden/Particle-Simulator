@@ -46,7 +46,7 @@ Simulation::Simulation(Engine* engine, SimulationTemplate simulationTemplate)
 {
     this->engine              = engine;
     this->engine->SetSimulation(this);
-    this->newParticleVelocity = 0.0;
+    this->newParticleVelocity = glm::vec2(0.0);
     this->newParticleMass     = 1e8;
     this->maxParticleCount    = MAX_NUM_PARTICLES;
     this->particles           = nullptr;
@@ -173,7 +173,7 @@ void Simulation::AddParticle(glm::dvec2 position)
     float y = 1.0f - 2.0f * (float)position.y / (float)WINDOW_HEIGHT;
 
     p.SetPosition(glm::vec2(x, y));
-    p.SetVelocity(glm::dvec2(this->newParticleVelocity, 0.0));
+    p.SetVelocity(this->newParticleVelocity);
     p.SetColor(p.CalculateColor());
     p.SetMass(this->newParticleMass + 1.0);
 
@@ -211,7 +211,7 @@ void Simulation::AddParticles(glm::dvec2 position)
         double r = radius * sqrt(dis_radius(gen)); // Random radius adjusted for area
 
         p.SetPosition(glm::dvec2(r * cos(angle) + x, r * sin(angle) + y)); // circle fill
-        p.SetVelocity(glm::dvec2(this->newParticleVelocity, 0.0));
+        p.SetVelocity(this->newParticleVelocity);
         p.SetColor(p.CalculateColor());
         p.SetMass(this->newParticleMass + 1.0);
 
@@ -446,9 +446,9 @@ double Simulation::GetNewParticleMass() const
 /**
   * @brief  Get velocity that will be applied to new particles
   * @param  None
-  * @retval double
+  * @retval glm::vec2
   */
-double Simulation::GetNewParticleVelocity() const
+glm::vec2 Simulation::GetNewParticleVelocity() const
 {
     return this->newParticleVelocity;
 }
@@ -547,7 +547,7 @@ void Simulation::SetNewParticleMass(double mass)
   * @param  velocity
   * @retval None
   */
-void Simulation::SetNewParticleVelocity(double velocity)
+void Simulation::SetNewParticleVelocity(glm::vec2 velocity)
 {
     this->newParticleVelocity = velocity;
 }

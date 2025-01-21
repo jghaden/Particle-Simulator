@@ -44,6 +44,7 @@ static float        fElapsedTime;
 static float        normalizedFaceHeight;
 static double       cursorWindowXPos;
 static double       cursorWindowYPos;
+static glm::dvec2   particleVelocity;
 static DURATION_T   elapsedTime;
 static TIME_POINT_T tp1;
 static TIME_POINT_T tp2;
@@ -113,6 +114,7 @@ int Engine::Init()
     cursorStatePrev = -1;
     cursorWindowXPos = -1;
     cursorWindowYPos = -1;
+    particleVelocity = glm::dvec2(0.0);
     projectionParticles = glm::ortho(
         -1.0f, 1.0f,
         -1.0f, 1.0f,
@@ -658,7 +660,7 @@ void Engine::Run()
             RenderText(textBuffer, 95.0f, this->GetWindowHeight() - 70.0f, 18.0f, FONT_T::RobotoLight, glm::vec3(0.61f, 0.85f, 0.9f));
 
             RenderText("Velocity:", 10.0f, this->GetWindowHeight() - 50.0f, 18.0f, FONT_T::RobotoBold, glm::vec3(0.61f, 0.85f, 0.9f));
-            sprintf_s(textBuffer, "%.0lf m/s", this->GetSimulation()->GetNewParticleVelocity());
+            sprintf_s(textBuffer, "(%.0lf, %.0lf) m/s", this->GetSimulation()->GetNewParticleVelocity().x, this->GetSimulation()->GetNewParticleVelocity().y);
             RenderText(textBuffer, 95.0f, this->GetWindowHeight() - 50.0f, 18.0f, FONT_T::RobotoLight, glm::vec3(0.61f, 0.85f, 0.9f));
 
             RenderText("Brush size:", 10.0f, this->GetWindowHeight() - 30.0f, 18.0f, FONT_T::RobotoBold, glm::vec3(0.61f, 0.85f, 0.9f));
@@ -954,8 +956,10 @@ void Engine::KeyboardCallback(GLFWwindow* window, int key, int scancode, int act
                 case GLFW_KEY_F: isFrameStepping = true; isSimulationPaused = true; e->GetSimulation()->UpdateParticles(); break;
                 case GLFW_KEY_R: isClearParticles = true; break;
 
-                case GLFW_KEY_S: e->GetSimulation()->SetNewParticleVelocity(e->GetSimulation()->GetNewParticleVelocity() - ((isKeyLeftCtrlPressed) ? 10 : 1)); break;
-                case GLFW_KEY_W: e->GetSimulation()->SetNewParticleVelocity(e->GetSimulation()->GetNewParticleVelocity() + ((isKeyLeftCtrlPressed) ? 10 : 1)); break;
+                case GLFW_KEY_W: particleVelocity.y += ((isKeyLeftCtrlPressed) ? 10 : 1); break;
+                case GLFW_KEY_A: particleVelocity.x -= ((isKeyLeftCtrlPressed) ? 10 : 1); break;
+                case GLFW_KEY_S: particleVelocity.y -= ((isKeyLeftCtrlPressed) ? 10 : 1); break;
+                case GLFW_KEY_D: particleVelocity.x += ((isKeyLeftCtrlPressed) ? 10 : 1); break;
 
                 case GLFW_KEY_LEFT_BRACKET: e->GetSimulation()->SetParticleBrushSize(e->GetSimulation()->GetParticleBrushSize() - ((isKeyLeftCtrlPressed) ? 10 : 1)); break;
                 case GLFW_KEY_RIGHT_BRACKET: e->GetSimulation()->SetParticleBrushSize(e->GetSimulation()->GetParticleBrushSize() + ((isKeyLeftCtrlPressed) ? 10 : 1)); break;
@@ -978,6 +982,7 @@ void Engine::KeyboardCallback(GLFWwindow* window, int key, int scancode, int act
             }
 
             e->GetSimulation()->SetNewParticleMass(powl(10, particleMassExp));
+            e->GetSimulation()->SetNewParticleVelocity(particleVelocity);
             e->GetSimulation()->SetTimeStep(powl(10, -timeStepExp));
             break;
         }
