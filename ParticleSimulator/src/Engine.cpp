@@ -1057,15 +1057,13 @@ void Engine::MouseScrollCallback(GLFWwindow* window, double xOffset, double yOff
     {
         int particleBrushSize = e->GetSimulation()->GetParticleBrushSize();
 
-        if (particleBrushSize < 100 && yOffset == 1)
+        if (yOffset == 1)
         {
-            particleBrushSize++;
-            e->GetSimulation()->SetParticleBrushSize(particleBrushSize);
+            e->GetSimulation()->SetParticleBrushSize(++particleBrushSize);
         }
-        else if (particleBrushSize > 1 && yOffset == -1)
+        else if (yOffset == -1)
         {
-            particleBrushSize--;
-            e->GetSimulation()->SetParticleBrushSize(particleBrushSize);
+            e->GetSimulation()->SetParticleBrushSize(--particleBrushSize);
         }
     }
 }
