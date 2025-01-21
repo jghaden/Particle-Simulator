@@ -571,7 +571,7 @@ void Simulation::SetParticles(Particles* particles)
   */
 void Simulation::SetParticleBrushSize(int size)
 {
-    this->particleBrushSize = size;
+    this->particleBrushSize = glm::clamp(size, 1, 150);
 }
 
 
