@@ -18,6 +18,7 @@
 
 #include "Simulation.hpp"
 #include "Particle.hpp"
+#include "Quadtree.hpp"
 
 /* Global variables --------------------------------------------------------- */
 /* Private typedef ---------------------------------------------------------- */
@@ -88,8 +89,8 @@ void Simulation::InitTemplateParticles()
         for (int i = 0; i < NUM_TEMPLATE_PARTICLES; ++i)
         {
             Particle p;
-            double angle = dis_angle(gen); // Random angle between 0 and 2*pi
-            double r = radius * sqrt(dis_radius(gen)); // Random radius adjusted for area
+            double angle = dis_angle(gen);              // Random angle between 0 and 2*pi
+            double r = radius * sqrt(dis_radius(gen));  // Random radius adjusted for area
 
             switch (this->GetSimulationTemplate())
             {
@@ -101,9 +102,9 @@ void Simulation::InitTemplateParticles()
                 case SimulationTemplate::Wave: p.SetPosition(glm::vec2(cos(angle / 4 - 2.25) / 1.1f, sin(angle * 4) / 1.1f)); break;
             }
 
-            p.SetVelocity(glm::dvec2(0.0));                 // Set initial particle velocities to zero
+            p.SetVelocity(glm::dvec2(0.0));    // Set initial particle velocities to zero
             p.SetColor(p.CalculateColor());    // Set initial color based on velocity
-            p.SetMass(1e8);                                 // Set initial particles mass
+            p.SetMass(1e8);                    // Set initial particles mass
 
             this->particles->push_back(p);
         }
@@ -273,7 +274,7 @@ void Simulation::Update()
 
 
 /**
-  * @brief  Calculate forces applied to particles using n-body physics
+  * @brief  Calculate forces applied to particles using Barnes-Hut algorithm
   * @param  None
   * @retval None
   */
@@ -281,85 +282,119 @@ void Simulation::UpdateParticles()
 {
     this->totalMass = 0;
 
-    for (size_t i = 0; i < this->particles->size(); ++i)
+    // Bounding box that encloses all particles
+    double minX = -1.0, maxX = 1.0;
+    double minY = -1.0, maxY = 1.0;
+
+    for (auto& p : *particles)
+    {
+        minX = std::min(minX, p.GetPosition().x);
+        maxX = std::max(maxX, p.GetPosition().x);
+        minY = std::min(minY, p.GetPosition().y);
+        maxY = std::max(maxY, p.GetPosition().y);
+    }
+
+    double centerX = (minX + maxX) * 0.5;
+    double centerY = (minY + maxY) * 0.5;
+    double halfSize = std::max(maxX - minX, maxY - minY) * 0.5;
+
+    // Build quadtree
+    QuadtreeNode root(centerX, centerY, halfSize + 1e-3);
+    for (auto& p : *particles)
+    {
+        root.Insert(&p);
+    }
+
+    root.ComputeMassDistribution();
+
+    // Compute forces using Barnes-Hut, accumulate in each particle
+    for (auto& p : *particles)
+    {
+        // Reset acceleration for this time step
+        p.SetAcceleration(glm::dvec2(0.0));
+
+        glm::dvec2 bhForce = ComputeForceBarnesHut(p, &root, THETA);
+        // a = F / m
+        glm::dvec2 accel = bhForce / p.GetMass();
+        p.SetAcceleration(accel);
+    }
+
+    // Update velocities based on acceleration and handle collisions
+    for (size_t i = 0; i < particles->size(); i++)
     {
         Particle& pI = (*particles)[i];
 
-        this->totalMass += pI.GetMass();
-
-        /*
-        Bounding box to prevent particles escaping from view
-        */
-        if (BOUNDING_BOX)
+        // Bounding box to keep particles in view
+        if (ENABLE_BOUNDING_BOX)
         {
-            for (int j = 0; j < 2; ++j)
+            glm::dvec2 position = pI.GetPosition();
+            glm::dvec2 velocity = pI.GetVelocity();
+
+            for (int axis = 0; axis < 2; axis++)
             {
-
-                Particle& pJ = (*particles)[j];
-
-                if (std::abs(pI.GetPosition()[j]) > 1.0)
+                if (std::abs(position[axis]) > 1.0)
                 {
-                    pI.GetPosition()[j] = glm::sign(pI.GetPosition()[j]) * 1.0;
-                    pI.GetPosition()[j] *= -0.9;
+                    // Clamp position
+                    position[axis] = glm::sign(position[axis]) * 1.0;
+                    // Invert (dampen) velocity along that axis
+                    velocity[axis] *= -0.9;
                 }
             }
+
+            // Write modified position & velocity back to the particle
+            pI.SetPosition(position);
+            pI.SetVelocity(velocity);
         }
 
-        /*
-        Calculate and apply gravitational forces and handle collision of particles
-        */
-        for (size_t j = i + 1; j < this->particles->size(); ++j)
+        glm::dvec2 posI = pI.GetPosition();
+
+        // Query a bounding box that roughly covers possible collisions.
+        double range = 2.0 * PARTICLE_RADIUS;
+        double xMin = posI.x - range;
+        double xMax = posI.x + range;
+        double yMin = posI.y - range;
+        double yMax = posI.y + range;
+
+        std::vector<Particle*> neighbors;
+        root.QueryRange(xMin, yMin, xMax, yMax, neighbors);
+
+        // Check collisions only with these neighbors
+        for (Particle* pJ : neighbors)
         {
-            Particle& pJ = (*particles)[j];
+            if (pJ == &pI)
+                continue; // skip self
 
-            glm::dvec2 direction = pJ.GetPosition() - pI.GetPosition();
+            glm::dvec2 direction = pJ->GetPosition() - pI.GetPosition();
             double distance = glm::length(direction);
-
-            // Gravity calculation
-            double gravityDistance = std::max(distance, MIN_INTERACTION_DISTANCE);
-            //double forceMagnitude = (GRAVITATIONAL_CONSTANT * pI.mass * pJ.mass) / (distance * distance);
-            double forceMagnitude = GRAVITATIONAL_CONSTANT * pI.GetMass() * pJ.GetMass() / (gravityDistance * gravityDistance + SOFTENING * SOFTENING);
-
-            glm::dvec2 force = forceMagnitude * glm::normalize(direction);
-
-            // Apply gravitational force
-            pI.SetAcceleration(force / pI.GetMass());
-            pJ.SetAcceleration(force / pJ.GetMass());
-
-            pI.SetVelocity(pI.GetVelocity() + (pI.GetAcceleration() * this->GetTimeStep()));
-            pJ.SetVelocity(pJ.GetVelocity() - (pJ.GetAcceleration() * this->GetTimeStep()));
-
-            /*
-            Collision detection and response
-            */
-            if (distance < 2 * PARTICLE_RADIUS)
+            if (distance < 2.0 * PARTICLE_RADIUS)
             {
                 glm::dvec2 collisionNormal = glm::normalize(direction);
-                glm::dvec2 relativeVelocity = pJ.GetVelocity() - pI.GetVelocity();
-
+                glm::dvec2 relativeVelocity = pJ->GetVelocity() - pI.GetVelocity();
                 double separatingVelocity = glm::dot(relativeVelocity, collisionNormal);
 
                 if (separatingVelocity < 0)
                 {
-                    double impulse = -(1 + COLLISION_DAMPING) * separatingVelocity / ((1 / pI.GetMass()) + (1 / pJ.GetMass()));
+                    double impulse = -(1 + COLLISION_DAMPING) * separatingVelocity /
+                        ((1 / pI.GetMass()) + (1 / pJ->GetMass()));
 
-                    pI.SetVelocity(pI.GetVelocity() - (impulse / pI.GetMass() * collisionNormal * REPULSION_FACTOR));
-                    pJ.SetVelocity(pJ.GetVelocity() + (impulse / pJ.GetMass() * collisionNormal * REPULSION_FACTOR));
+                    pI.SetVelocity(pI.GetVelocity() -
+                        (impulse / pI.GetMass() * collisionNormal * REPULSION_FACTOR));
+                    pJ->SetVelocity(pJ->GetVelocity() +
+                        (impulse / pJ->GetMass() * collisionNormal * REPULSION_FACTOR));
 
                     // Separate overlapping particles
                     double overlap = 2 * PARTICLE_RADIUS - distance;
                     glm::dvec2 separationVector = overlap * 0.5 * collisionNormal;
 
                     pI.SetPosition(pI.GetPosition() - separationVector);
-                    pJ.SetPosition(pJ.GetPosition() + separationVector);
+                    pJ->SetPosition(pJ->GetPosition() + separationVector);
                 }
             }
         }
 
-        /*
-        Update the particle properties
-        */
         pI.Update(this->GetTimeStep());
+
+        this->totalMass = root.totalMass;
     }
 }
 
