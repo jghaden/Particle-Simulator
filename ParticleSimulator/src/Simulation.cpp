@@ -260,21 +260,11 @@ void Simulation::UpdateParticles()
 
     if (numParticles == 0) return;
 
-    // Bounding box that encloses all particles
-    double minX = -1.0, maxX = 1.0;
-    double minY = -1.0, maxY = 1.0;
-
-    for (size_t i = 0; i < numParticles; ++i)
-    {
-        minX = std::min(minX, particles.positions[i].x);
-        maxX = std::max(maxX, particles.positions[i].x);
-        minY = std::min(minY, particles.positions[i].y);
-        maxY = std::max(maxY, particles.positions[i].y);
-    }
-
-    double centerX = (minX + maxX) * 0.5;
-    double centerY = (minY + maxY) * 0.5;
-    double halfSize = std::max(maxX - minX, maxY - minY) * 0.5;
+    // Use fixed bounding box since ENABLE_BOUNDING_BOX clamps particles to viewport [-1, 1]
+    // No need to scan particles - simpler and faster
+    double centerX = 0.0;
+    double centerY = 0.0;
+    double halfSize = 1.0;
 
     // Build quadtree
     QuadtreeNode root(centerX, centerY, halfSize + 1e-3);
@@ -285,8 +275,10 @@ void Simulation::UpdateParticles()
 
     root.ComputeMassDistribution(particles);
 
+    // Parallel force computation using OpenMP
     // Compute forces using Barnes-Hut, accumulate in each particle
-    for (size_t i = 0; i < numParticles; ++i)
+    #pragma omp parallel for schedule(dynamic, 64) if(numParticles > 1000)
+    for (int i = 0; i < (int)numParticles; ++i)
     {
         // Reset acceleration for this time step
         particles.accelerations[i] = glm::dvec2(0.0);

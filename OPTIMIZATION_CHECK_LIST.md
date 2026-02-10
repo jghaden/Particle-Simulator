@@ -138,7 +138,34 @@
 
 ---
 
-## Phase 4: Advanced Optimizations (Target: 2-4x additional speedup)
+## Phase 4: Advanced Optimizations (Target: 1.5-2x additional speedup)
+
+### 8. ~~Incremental Bounding Box Tracking~~ ❌ REMOVED
+- [x] Implemented incremental bounding box caching
+- [x] Testing revealed ineffective (still O(n) every frame)
+- [x] **REMOVED** - Replaced with fixed bounds since viewport clamps to [-1, 1]
+
+**Status**: REMOVED - Ineffective optimization
+**Performance Impact**: Neutral (no benefit, added complexity)
+**Replacement**: Use fixed bounding box (centerX=0, centerY=0, halfSize=1.0)
+
+---
+
+### 9. OpenMP Parallel Force Computation ✅ LOW-MEDIUM RISK
+- [x] Enable OpenMP support in Visual Studio project (Release x64)
+- [x] Add `#pragma omp parallel for` to Barnes-Hut force loop
+- [x] Use dynamic scheduling with chunk size 64
+- [x] Only parallelize when particle count > 1000
+- [ ] Test: Build and verify compilation
+- [ ] Test: Compare single-threaded vs multi-threaded performance
+- [ ] Test: Verify physics correctness with parallelization
+
+**Status**: Implementation complete, ready for testing
+**Performance Impact**: TBD (Expected: 1.5-2x on multi-core CPUs)
+
+---
+
+## Phase 4: Advanced Optimizations (Future - High Risk)
 
 ### 8. Persistent Quadtree or Spatial Hashing ⚠️ RESEARCH PROJECT
 - [ ] Research approach selection
