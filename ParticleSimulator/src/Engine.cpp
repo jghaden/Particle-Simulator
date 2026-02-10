@@ -19,6 +19,7 @@
 #include "Engine.hpp"
 #include "Simulation.hpp"
 #include "Particle.hpp"
+#include "ParticleData.hpp"
 
 /* Global variables --------------------------------------------------------- */
 /* Private typedef ---------------------------------------------------------- */
@@ -147,6 +148,10 @@ int Engine::Init()
 
     InitParticleBuffers(VAOParticles, VBOParticlePositions, VBOParticleColors, this->GetSimulation()->GetMaxParticleCount());
     InitTextBuffers(VAOText, VBOText);
+
+    // Pre-allocate staging buffers for GPU uploads (optimization)
+    stagingPositions.reserve(this->GetSimulation()->GetMaxParticleCount() * 2);
+    stagingColors.reserve(this->GetSimulation()->GetMaxParticleCount() * 3);
 
     glUseProgram(shaderParticle);
 
@@ -578,8 +583,9 @@ void Engine::Run()
 
     GLuint shaderParticle = GetShader("particle");
 
-    std::vector<Particle> particles;
-    this->GetSimulation()->SetParticles(&particles);
+    ParticleData particleData;
+    particleData.Reserve(this->GetSimulation()->GetMaxParticleCount());
+    this->GetSimulation()->SetParticleData(&particleData);
     this->GetSimulation()->InitTemplateParticles();
 
     while (!glfwWindowShouldClose(glfwWindow))
@@ -622,7 +628,7 @@ void Engine::Run()
             this->GetSimulation()->Update();
         }
 
-        UpdateParticleBuffers(particles);
+        UpdateParticleBuffers(particleData);
 
         // Clear screen
         glClear(GL_COLOR_BUFFER_BIT);
@@ -631,7 +637,7 @@ void Engine::Run()
         // Render particles
         glDisable(GL_BLEND);
         glUseProgram(shaderParticle);
-        RenderParticles(VAOParticles, particles.size());
+        RenderParticles(VAOParticles, particleData.Size());
 
         // Render text
         if (isShowingUI)
@@ -694,25 +700,29 @@ void Engine::Run()
   * @param  particles
   * @retval None
   */
-void Engine::UpdateParticleBuffers(const std::vector<Particle>& particles)
+void Engine::UpdateParticleBuffers(const ParticleData& particleData)
 {
-    std::vector<GLfloat> positions;
-    std::vector<GLfloat> colors;
+    size_t numParticles = particleData.Size();
 
-    for (const auto& p : particles)
+    // Reuse pre-allocated staging buffers instead of allocating new ones
+    stagingPositions.resize(numParticles * 2);
+    stagingColors.resize(numParticles * 3);
+
+    // Direct access to SoA data for optimal cache performance
+    for (size_t i = 0; i < numParticles; ++i)
     {
-        positions.push_back(static_cast<GLfloat>(p.GetPosition().x));
-        positions.push_back(static_cast<GLfloat>(p.GetPosition().y));
-        colors.push_back(p.GetColor().r);
-        colors.push_back(p.GetColor().g);
-        colors.push_back(p.GetColor().b);
+        stagingPositions[i * 2 + 0] = static_cast<GLfloat>(particleData.positions[i].x);
+        stagingPositions[i * 2 + 1] = static_cast<GLfloat>(particleData.positions[i].y);
+        stagingColors[i * 3 + 0] = particleData.colors[i].r;
+        stagingColors[i * 3 + 1] = particleData.colors[i].g;
+        stagingColors[i * 3 + 2] = particleData.colors[i].b;
     }
 
     glBindBuffer(GL_ARRAY_BUFFER, VBOParticlePositions);
-    glBufferSubData(GL_ARRAY_BUFFER, 0, positions.size() * sizeof(GLfloat), positions.data());
+    glBufferSubData(GL_ARRAY_BUFFER, 0, stagingPositions.size() * sizeof(GLfloat), stagingPositions.data());
 
     glBindBuffer(GL_ARRAY_BUFFER, VBOParticleColors);
-    glBufferSubData(GL_ARRAY_BUFFER, 0, colors.size() * sizeof(GLfloat), colors.data());
+    glBufferSubData(GL_ARRAY_BUFFER, 0, stagingColors.size() * sizeof(GLfloat), stagingColors.data());
 }
 
 

@@ -22,11 +22,13 @@
 
 #include "Simulation.hpp"
 #include "Particle.hpp"
+#include "ParticleData.hpp"
 
 /* Exported types ----------------------------------------------------------- */
 /* Exported constants ------------------------------------------------------- */
 
-constexpr double THETA = 2.0;   // Threshold distance to calculate long-range force
+constexpr double THETA = 2.0;   // Threshold distance to calculate long-range force (lower = more accurate, higher = faster)
+constexpr size_t BUCKET_CAPACITY = 8;  // Maximum particles per leaf node before subdivision
 
 /* Exported macro ----------------------------------------------------------- */
 /* Exported variables ------------------------------------------------------- */
@@ -43,7 +45,7 @@ struct QuadtreeNode
     double     halfSize;                // Half the width/height of the node
     double     totalMass;               // Total mass of particles in this node
     glm::dvec2 centerOfMass;            // Center of mass for all particles in this node
-    Particle*  particle;                // If leaf node, store a small list of particles
+    std::vector<size_t> particleIndices;   // If leaf node, store up to BUCKET_CAPACITY particle indices
 
     // Children nodes
     std::unique_ptr<QuadtreeNode> nw;   // north west
@@ -56,10 +58,10 @@ struct QuadtreeNode
 
     QuadtreeNode(double centerX, double centerY, double halfSize);
 
-    void ComputeMassDistribution();
-    void Insert(Particle* particle);
-    void InsertIntoChild(Particle* particle);
-    void QueryRange(double xMin, double yMin, double xMax, double yMax, std::vector<Particle*>& results);
+    void ComputeMassDistribution(const ParticleData& particles);
+    void Insert(size_t particleIndex, const ParticleData& particles);
+    void InsertIntoChild(size_t particleIndex, const ParticleData& particles);
+    void QueryRange(double xMin, double yMin, double xMax, double yMax, std::vector<size_t>& results);
     void Subdivide();
     bool Contains(double px, double py) const;
 
@@ -68,7 +70,7 @@ struct QuadtreeNode
 };
 
 
-glm::dvec2 ComputeForceBarnesHut(const Particle& particle, const QuadtreeNode* node, double theta);
+glm::dvec2 ComputeForceBarnesHut(size_t particleIndex, const ParticleData& particles, const QuadtreeNode* node, double theta);
 
 
 

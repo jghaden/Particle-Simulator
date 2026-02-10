@@ -113,7 +113,16 @@ void Particle::Update(double timeStep)
   */
 void Particle::UpdateColor()
 {
-    color = CalculateColor();
+    // Only update color every N frames for performance (optimization)
+    if (framesSinceColorUpdate >= COLOR_UPDATE_INTERVAL)
+    {
+        color = CalculateColor();
+        framesSinceColorUpdate = 0;
+    }
+    else
+    {
+        framesSinceColorUpdate++;
+    }
 }
 
 

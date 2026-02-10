@@ -72,6 +72,10 @@ private:
     glm::dvec2 velocity;
     glm::vec3  color;
 
+    // Color update caching (optimization)
+    int framesSinceColorUpdate = 0;
+    static constexpr int COLOR_UPDATE_INTERVAL = 5;
+
     /* Private member functions ------------------------------------------------- */
     /* Getters ------------------------------------------------------------------ */
     /* Setters ------------------------------------------------------------------ */

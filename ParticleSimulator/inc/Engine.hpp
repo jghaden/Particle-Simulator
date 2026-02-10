@@ -21,6 +21,7 @@
 #include "PCH.hpp"
 
 #include "Font.hpp"
+#include "ParticleData.hpp"
 
 /* Exported types ----------------------------------------------------------- */
 
@@ -73,8 +74,8 @@ public:
     void RenderCircle(float x, float y, float radius, float outlineThickness, glm::vec4 fillColor, glm::vec4 outlineColor);
     void RenderParticles(GLuint VAO, size_t particleCount);
     void RenderText(std::string text, GLfloat x, GLfloat y, GLfloat pointSize, FONT_T font, glm::vec3 color);
-    void Run();    
-    void UpdateParticleBuffers(const std::vector<Particle>& particles);
+    void Run();
+    void UpdateParticleBuffers(const ParticleData& particleData);
     GLuint CompileShader(GLenum shaderType, const char* shaderSource);
     GLuint LinkShaders(const char* vertex_file_path, const char* fragment_file_path);
     SHADER_SOURCE_T ReadShaderFile(const char* filePath) const;
@@ -99,6 +100,10 @@ private:
     CHARACTERS_T fonts[NUMBER_OF_FONTS];
     Simulation*  simulation               = nullptr;
     GLFWwindow*  glfwWindow               = nullptr;
+
+    // Pre-allocated staging buffers for GPU uploads (optimization)
+    std::vector<GLfloat> stagingPositions;
+    std::vector<GLfloat> stagingColors;
 
     /* Private member functions ------------------------------------------------- */
 

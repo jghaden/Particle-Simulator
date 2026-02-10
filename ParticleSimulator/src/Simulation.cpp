@@ -49,7 +49,7 @@ Simulation::Simulation(Engine* engine, SimulationTemplate simulationTemplate)
     this->newParticleVelocity = glm::vec2(0.0);
     this->newParticleMass     = 1e8;
     this->maxParticleCount    = MAX_NUM_PARTICLES;
-    this->particles           = nullptr;
+    this->particleData        = nullptr;
     this->particleBrushSize   = 5;
     this->simulationTemplate  = simulationTemplate;
     this->simulationTime      = 0.0;
@@ -88,25 +88,21 @@ void Simulation::InitTemplateParticles()
 
         for (int i = 0; i < NUM_TEMPLATE_PARTICLES; ++i)
         {
-            Particle p;
+            glm::dvec2 position;
             double angle = dis_angle(gen);              // Random angle between 0 and 2*pi
             double r = radius * sqrt(dis_radius(gen));  // Random radius adjusted for area
 
             switch (this->GetSimulationTemplate())
             {
-                case SimulationTemplate::SquareFill: p.SetPosition(glm::vec2(dis(gen) / 1.05f, dis(gen) / 1.05f)); break;
-                case SimulationTemplate::CircleFill: p.SetPosition(glm::vec2(r * cos(angle), r * sin(angle))); break;
-                case SimulationTemplate::CircleOutline: p.SetPosition(glm::vec2(cos(angle) / 1.1f, sin(angle) / 1.1f)); break;
-                case SimulationTemplate::EllipseOutline: glm::vec2(cos(angle) / 6.0f, sin(angle) / 1.1f); break;
-                case SimulationTemplate::RightTriangle: p.SetPosition(glm::vec2(r * cos(angle) * cos(angle) - 0.25f, r * sin(angle) * sin(angle) - 0.25f)); break;
-                case SimulationTemplate::Wave: p.SetPosition(glm::vec2(cos(angle / 4 - 2.25) / 1.1f, sin(angle * 4) / 1.1f)); break;
+                case SimulationTemplate::SquareFill: position = glm::dvec2(dis(gen) / 1.05, dis(gen) / 1.05); break;
+                case SimulationTemplate::CircleFill: position = glm::dvec2(r * cos(angle), r * sin(angle)); break;
+                case SimulationTemplate::CircleOutline: position = glm::dvec2(cos(angle) / 1.1, sin(angle) / 1.1); break;
+                case SimulationTemplate::EllipseOutline: position = glm::dvec2(cos(angle) / 6.0, sin(angle) / 1.1); break;
+                case SimulationTemplate::RightTriangle: position = glm::dvec2(r * cos(angle) * cos(angle) - 0.25, r * sin(angle) * sin(angle) - 0.25); break;
+                case SimulationTemplate::Wave: position = glm::dvec2(cos(angle / 4 - 2.25) / 1.1, sin(angle * 4) / 1.1); break;
             }
 
-            p.SetVelocity(glm::dvec2(0.0));    // Set initial particle velocities to zero
-            p.SetColor(p.CalculateColor());    // Set initial color based on velocity
-            p.SetMass(1e8);                    // Set initial particles mass
-
-            this->particles->push_back(p);
+            this->particleData->AddParticle(1e8, position, glm::dvec2(0.0));
         }
     }
     else
@@ -115,44 +111,29 @@ void Simulation::InitTemplateParticles()
         {
             case SimulationTemplate::CircularOrbit:
             {
-                Particle star(1e6, glm::dvec2(0.0, 0.0), glm::dvec2(0.0));
-                Particle planet(1, glm::dvec2(0, 0.25), glm::dvec2(5, 0.0));
-
-                this->particles->push_back(star);
-                this->particles->push_back(planet);
+                this->particleData->AddParticle(1e6, glm::dvec2(0.0, 0.0), glm::dvec2(0.0));
+                this->particleData->AddParticle(1, glm::dvec2(0, 0.25), glm::dvec2(5, 0.0));
                 break;
             }
             case SimulationTemplate::EllipticalOrbit:
             {
-                Particle star(1e10, glm::dvec2(0.0, 0.0), glm::dvec2(0.0));
-                Particle planet(1, glm::dvec2(0, 0.1), glm::dvec2(20, 0.0));
-
-                this->particles->push_back(star);
-                this->particles->push_back(planet);
+                this->particleData->AddParticle(1e10, glm::dvec2(0.0, 0.0), glm::dvec2(0.0));
+                this->particleData->AddParticle(1, glm::dvec2(0, 0.1), glm::dvec2(20, 0.0));
                 break;
             }
             case SimulationTemplate::PlanetaryOrbit:
             {
-                Particle star(1e6, glm::dvec2(0.0, 0.0), glm::dvec2(0.0));
-                Particle planet1(1.0, glm::dvec2(0, 0.1), glm::dvec2(3.2, 0.0));
-                Particle planet2(1.0, glm::dvec2(0, 0.3), glm::dvec2(5.5, 0.0));
-                Particle planet3(1.0, glm::dvec2(0, 0.5), glm::dvec2(7.0, 0.0));
-                Particle planet4(1.0, glm::dvec2(0, 0.75), glm::dvec2(8.5, 0.0));
-
-                this->particles->push_back(star);
-                this->particles->push_back(planet1);
-                this->particles->push_back(planet2);
-                this->particles->push_back(planet3);
-                this->particles->push_back(planet4);
+                this->particleData->AddParticle(1e6, glm::dvec2(0.0, 0.0), glm::dvec2(0.0));
+                this->particleData->AddParticle(1.0, glm::dvec2(0, 0.1), glm::dvec2(3.2, 0.0));
+                this->particleData->AddParticle(1.0, glm::dvec2(0, 0.3), glm::dvec2(5.5, 0.0));
+                this->particleData->AddParticle(1.0, glm::dvec2(0, 0.5), glm::dvec2(7.0, 0.0));
+                this->particleData->AddParticle(1.0, glm::dvec2(0, 0.75), glm::dvec2(8.5, 0.0));
                 break;
             }
             case SimulationTemplate::BinaryStar:
             {
-                Particle star1(1e6, glm::dvec2(-0.25, 0.0), glm::dvec2(0.0, 5.0));
-                Particle star2(1e6, glm::dvec2(0.25, 0.0), glm::dvec2(0.f, -5.0));
-
-                this->particles->push_back(star1);
-                this->particles->push_back(star2);
+                this->particleData->AddParticle(1e6, glm::dvec2(-0.25, 0.0), glm::dvec2(0.0, 5.0));
+                this->particleData->AddParticle(1e6, glm::dvec2(0.25, 0.0), glm::dvec2(0.0, -5.0));
                 break;
             }
         }
@@ -167,19 +148,16 @@ void Simulation::InitTemplateParticles()
   */
 void Simulation::AddParticle(glm::dvec2 position)
 {
-    Particle p;
-
-    float x = 2.0f * (float)position.x / (float)WINDOW_WIDTH - 1.0f;
-    float y = 1.0f - 2.0f * (float)position.y / (float)WINDOW_HEIGHT;
-
-    p.SetPosition(glm::vec2(x, y));
-    p.SetVelocity(this->newParticleVelocity);
-    p.SetColor(p.CalculateColor());
-    p.SetMass(this->newParticleMass + 1.0);
+    double x = 2.0 * position.x / (double)WINDOW_WIDTH - 1.0;
+    double y = 1.0 - 2.0 * position.y / (double)WINDOW_HEIGHT;
 
     if (this->GetParticleCount() < this->GetMaxParticleCount())
     {
-        this->particles->push_back(p);
+        this->particleData->AddParticle(
+            this->newParticleMass + 1.0,
+            glm::dvec2(x, y),
+            glm::dvec2(this->newParticleVelocity)
+        );
     }
 }
 
@@ -193,31 +171,28 @@ void Simulation::AddParticles(glm::dvec2 position)
 {
     std::random_device rd;
     std::mt19937 gen(rd());
-    std::uniform_real_distribution<> dis(-1.0, 1.0);
     std::uniform_real_distribution<> dis_angle(0.0, 2.0 * MATH_PI_CONSTANT);
     std::uniform_real_distribution<> dis_radius(0.0, 1.0);
 
     double radius = 0.01 * particleBrushSize / 2.0;
-
-    Particle p;
 
     double x = 2.0 * position.x / (double)WINDOW_WIDTH - 1.0;
     double y = 1.0 - 2.0 * position.y / (double)WINDOW_HEIGHT;
 
     for (int i = 0; i < this->particleBrushSize; ++i)
     {
-        Particle p;
         double angle = dis_angle(gen); // Random angle between 0 and 2*pi
         double r = radius * sqrt(dis_radius(gen)); // Random radius adjusted for area
 
-        p.SetPosition(glm::dvec2(r * cos(angle) + x, r * sin(angle) + y)); // circle fill
-        p.SetVelocity(this->newParticleVelocity);
-        p.SetColor(p.CalculateColor());
-        p.SetMass(this->newParticleMass + 1.0);
+        glm::dvec2 particlePos = glm::dvec2(r * cos(angle) + x, r * sin(angle) + y);
 
         if (this->GetParticleCount() < this->GetMaxParticleCount())
         {
-            this->particles->push_back(p);
+            this->particleData->AddParticle(
+                this->newParticleMass + 1.0,
+                particlePos,
+                glm::dvec2(this->newParticleVelocity)
+            );
         }
     }
 }
@@ -230,7 +205,7 @@ void Simulation::AddParticles(glm::dvec2 position)
   */
 void Simulation::RemoveAllParticles()
 {
-    this->particles->clear();
+    this->particleData->Clear();
 }
 
 
@@ -244,18 +219,15 @@ void Simulation::RemoveParticle(glm::dvec2 position)
     double x = 2.0 * position.x / (double)WINDOW_WIDTH - 1.0;
     double y = 1.0 - 2.0 * position.y / (double)WINDOW_HEIGHT;
 
-    for (size_t i = 0; i < this->particles->size(); ++i)
+    // Remove particles in reverse order to avoid index shifting issues
+    for (int i = (int)this->particleData->Size() - 1; i >= 0; --i)
     {
-        Particle& p = (*particles)[i];
-
-        glm::dvec2 direction = p.GetPosition() - glm::dvec2(x, y);
+        glm::dvec2 direction = this->particleData->positions[i] - glm::dvec2(x, y);
         double distance = glm::length(direction);
 
         if (distance < (this->particleBrushSize * PARTICLE_RADIUS / 2))
         {
-            std::vector<Particle>::iterator it = this->particles->begin();
-            std::advance(it, i);
-            this->particles->erase(it);
+            this->particleData->RemoveParticle(i);
         }
     }
 }
@@ -282,16 +254,21 @@ void Simulation::UpdateParticles()
 {
     this->totalMass = 0;
 
+    ParticleData& particles = *particleData;
+    size_t numParticles = particles.Size();
+
+    if (numParticles == 0) return;
+
     // Bounding box that encloses all particles
     double minX = -1.0, maxX = 1.0;
     double minY = -1.0, maxY = 1.0;
 
-    for (auto& p : *particles)
+    for (size_t i = 0; i < numParticles; ++i)
     {
-        minX = std::min(minX, p.GetPosition().x);
-        maxX = std::max(maxX, p.GetPosition().x);
-        minY = std::min(minY, p.GetPosition().y);
-        maxY = std::max(maxY, p.GetPosition().y);
+        minX = std::min(minX, particles.positions[i].x);
+        maxX = std::max(maxX, particles.positions[i].x);
+        minY = std::min(minY, particles.positions[i].y);
+        maxY = std::max(maxY, particles.positions[i].y);
     }
 
     double centerX = (minX + maxX) * 0.5;
@@ -300,35 +277,36 @@ void Simulation::UpdateParticles()
 
     // Build quadtree
     QuadtreeNode root(centerX, centerY, halfSize + 1e-3);
-    for (auto& p : *particles)
+    for (size_t i = 0; i < numParticles; ++i)
     {
-        root.Insert(&p);
+        root.Insert(i, particles);
     }
 
-    root.ComputeMassDistribution();
+    root.ComputeMassDistribution(particles);
 
     // Compute forces using Barnes-Hut, accumulate in each particle
-    for (auto& p : *particles)
+    for (size_t i = 0; i < numParticles; ++i)
     {
         // Reset acceleration for this time step
-        p.SetAcceleration(glm::dvec2(0.0));
+        particles.accelerations[i] = glm::dvec2(0.0);
 
-        glm::dvec2 bhForce = ComputeForceBarnesHut(p, &root, THETA);
+        glm::dvec2 bhForce = ComputeForceBarnesHut(i, particles, &root, THETA);
         // a = F / m
-        glm::dvec2 accel = bhForce / p.GetMass();
-        p.SetAcceleration(accel);
+        particles.accelerations[i] = bhForce / particles.masses[i];
     }
 
-    // Update velocities based on acceleration and handle collisions
-    for (size_t i = 0; i < particles->size(); i++)
-    {
-        Particle& pI = (*particles)[i];
+    // Pre-allocate reusable vector for collision detection (optimization)
+    std::vector<size_t> neighborsReusable;
+    neighborsReusable.reserve(32);
 
+    // Update velocities based on acceleration and handle collisions
+    for (size_t i = 0; i < numParticles; i++)
+    {
         // Bounding box to keep particles in view
         if (ENABLE_BOUNDING_BOX)
         {
-            glm::dvec2 position = pI.GetPosition();
-            glm::dvec2 velocity = pI.GetVelocity();
+            glm::dvec2& position = particles.positions[i];
+            glm::dvec2& velocity = particles.velocities[i];
 
             for (int axis = 0; axis < 2; axis++)
             {
@@ -340,13 +318,9 @@ void Simulation::UpdateParticles()
                     velocity[axis] *= -0.9;
                 }
             }
-
-            // Write modified position & velocity back to the particle
-            pI.SetPosition(position);
-            pI.SetVelocity(velocity);
         }
 
-        glm::dvec2 posI = pI.GetPosition();
+        const glm::dvec2& posI = particles.positions[i];
 
         // Query a bounding box that roughly covers possible collisions.
         double range = 2.0 * PARTICLE_RADIUS;
@@ -355,44 +329,42 @@ void Simulation::UpdateParticles()
         double yMin = posI.y - range;
         double yMax = posI.y + range;
 
-        std::vector<Particle*> neighbors;
-        root.QueryRange(xMin, yMin, xMax, yMax, neighbors);
+        neighborsReusable.clear();
+        root.QueryRange(xMin, yMin, xMax, yMax, neighborsReusable);
 
         // Check collisions only with these neighbors
-        for (Particle* pJ : neighbors)
+        for (size_t j : neighborsReusable)
         {
-            if (pJ == &pI)
+            if (j == i)
                 continue; // skip self
 
-            glm::dvec2 direction = pJ->GetPosition() - pI.GetPosition();
+            glm::dvec2 direction = particles.positions[j] - particles.positions[i];
             double distance = glm::length(direction);
             if (distance < 2.0 * PARTICLE_RADIUS)
             {
                 glm::dvec2 collisionNormal = glm::normalize(direction);
-                glm::dvec2 relativeVelocity = pJ->GetVelocity() - pI.GetVelocity();
+                glm::dvec2 relativeVelocity = particles.velocities[j] - particles.velocities[i];
                 double separatingVelocity = glm::dot(relativeVelocity, collisionNormal);
 
                 if (separatingVelocity < 0)
                 {
                     double impulse = -(1 + COLLISION_DAMPING) * separatingVelocity /
-                        ((1 / pI.GetMass()) + (1 / pJ->GetMass()));
+                        ((1 / particles.masses[i]) + (1 / particles.masses[j]));
 
-                    pI.SetVelocity(pI.GetVelocity() -
-                        (impulse / pI.GetMass() * collisionNormal * REPULSION_FACTOR));
-                    pJ->SetVelocity(pJ->GetVelocity() +
-                        (impulse / pJ->GetMass() * collisionNormal * REPULSION_FACTOR));
+                    particles.velocities[i] -= (impulse / particles.masses[i]) * collisionNormal * REPULSION_FACTOR;
+                    particles.velocities[j] += (impulse / particles.masses[j]) * collisionNormal * REPULSION_FACTOR;
 
                     // Separate overlapping particles
                     double overlap = 2 * PARTICLE_RADIUS - distance;
                     glm::dvec2 separationVector = overlap * 0.5 * collisionNormal;
 
-                    pI.SetPosition(pI.GetPosition() - separationVector);
-                    pJ->SetPosition(pJ->GetPosition() + separationVector);
+                    particles.positions[i] -= separationVector;
+                    particles.positions[j] += separationVector;
                 }
             }
         }
 
-        pI.Update(this->GetTimeStep());
+        particles.UpdateParticle(i, this->GetTimeStep());
 
         this->totalMass = root.totalMass;
     }
@@ -428,7 +400,7 @@ size_t Simulation::GetMaxParticleCount() const
   */
 size_t Simulation::GetParticleCount() const
 {
-    return this->particles->size();
+    return this->particleData->Size();
 }
 
 
@@ -499,13 +471,13 @@ SimulationTemplate Simulation::GetSimulationTemplate() const
 
 
 /**
-  * @brief  Get pointer to particles
+  * @brief  Get pointer to particle data (SoA)
   * @param  None
-  * @retval Particles*
+  * @retval ParticleData*
   */
-Particles* Simulation::GetParticles() const
+ParticleData* Simulation::GetParticleData() const
 {
-    return this->particles;
+    return this->particleData;
 }
 
 
@@ -554,13 +526,13 @@ void Simulation::SetNewParticleVelocity(glm::vec2 velocity)
 
 
 /**
-  * @brief  Bind particles that will be used in the simulation
-  * @param  particles*
+  * @brief  Bind particle data that will be used in the simulation
+  * @param  particleData*
   * @retval None
   */
-void Simulation::SetParticles(Particles* particles)
+void Simulation::SetParticleData(ParticleData* particleData)
 {
-    this->particles = particles;
+    this->particleData = particleData;
 }
 
 

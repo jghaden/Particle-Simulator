@@ -47,25 +47,38 @@ QuadtreeNode::QuadtreeNode(double centerX, double centerY, double halfSize)
     this->centerX      = centerX;
     this->centerY      = centerY;
     this->halfSize     = halfSize;
-    this->particle     = nullptr;
     this->totalMass    = 0.0;
+    this->particleIndices.reserve(BUCKET_CAPACITY);
 }
 
 
 /**
   * @brief  Compute the total mass and center of mass of each node after building the quadtree
-  * @param  None
+  * @param  particles Reference to particle data (SoA)
   * @retval None
   */
-void QuadtreeNode::ComputeMassDistribution()
+void QuadtreeNode::ComputeMassDistribution(const ParticleData& particles)
 {
-    // Leaf with a single particle
+    // Leaf node with particles in bucket
     if (!nw && !ne && !sw && !se)
     {
-        if (particle)
+        if (!particleIndices.empty())
         {
-            totalMass = particle->GetMass();
-            centerOfMass = particle->GetPosition();
+            double massSum = 0.0;
+            glm::dvec2 weightedPosition(0.0);
+
+            for (size_t idx : particleIndices)
+            {
+                double mass = particles.masses[idx];
+                massSum += mass;
+                weightedPosition += particles.positions[idx] * mass;
+            }
+
+            totalMass = massSum;
+            if (massSum > 0.0)
+            {
+                centerOfMass = weightedPosition / massSum;
+            }
         }
         return;
     }
@@ -76,25 +89,25 @@ void QuadtreeNode::ComputeMassDistribution()
 
     if (nw)
     {
-        nw->ComputeMassDistribution();
+        nw->ComputeMassDistribution(particles);
         massSum += nw->totalMass;
         weightedPosition += nw->centerOfMass * nw->totalMass;
     }
     if (ne)
     {
-        ne->ComputeMassDistribution();
+        ne->ComputeMassDistribution(particles);
         massSum += ne->totalMass;
         weightedPosition += ne->centerOfMass * ne->totalMass;
     }
     if (sw)
     {
-        sw->ComputeMassDistribution();
+        sw->ComputeMassDistribution(particles);
         massSum += sw->totalMass;
         weightedPosition += sw->centerOfMass * sw->totalMass;
     }
     if (se)
     {
-        se->ComputeMassDistribution();
+        se->ComputeMassDistribution(particles);
         massSum += se->totalMass;
         weightedPosition += se->centerOfMass * se->totalMass;
     }
@@ -110,68 +123,69 @@ void QuadtreeNode::ComputeMassDistribution()
 // Insert a particle into the quadtree
 /**
   * @brief  Insert a particle into the quadtree
-  * @param  particle
+  * @param  particleIndex Index of particle in ParticleData
+  * @param  particles Reference to particle data (SoA)
   * @retval None
   */
-void QuadtreeNode::Insert(Particle* particle)
+void QuadtreeNode::Insert(size_t particleIndex, const ParticleData& particles)
 {
-    double px = particle->GetPosition().x;
-    double py = particle->GetPosition().y;
+    double px = particles.positions[particleIndex].x;
+    double py = particles.positions[particleIndex].y;
 
-    // If this node has no child and no particle stored, store it here
-    if (!this->particle && !nw && !ne && !sw && !se)
-    {
-        this->particle = particle;
-        return;
-    }
-
-    // If this node is a leaf but already has a particle,
-    // we must subdivide and re-insert that existing particle + the new one
+    // If this is a leaf node and bucket has capacity, add to bucket
     if (!nw && !ne && !sw && !se)
     {
+        if (particleIndices.size() < BUCKET_CAPACITY)
+        {
+            particleIndices.push_back(particleIndex);
+            return;
+        }
+
+        // Bucket is full, must subdivide
         Subdivide();
 
-        // Re-insert the existing particle
-        if (this->particle)
+        // Re-insert all existing particles in the bucket
+        for (size_t idx : particleIndices)
         {
-            InsertIntoChild(this->particle);
-            this->particle = nullptr;
+            InsertIntoChild(idx, particles);
         }
+        particleIndices.clear();
     }
 
-    // Insert the new particle
-    InsertIntoChild(particle);
+    // Insert the new particle into appropriate child
+    InsertIntoChild(particleIndex, particles);
 }
 
 
 // Insert a particle into a child node
 /**
   * @brief  Insert a particle into a child node
-  * @param  particle
+  * @param  particleIndex Index of particle in ParticleData
+  * @param  particles Reference to particle data (SoA)
   * @retval None
   */
-void QuadtreeNode::InsertIntoChild(Particle* particle)
+void QuadtreeNode::InsertIntoChild(size_t particleIndex, const ParticleData& particles)
 {
-    double px = particle->GetPosition().x;
-    double py = particle->GetPosition().y;
+    double px = particles.positions[particleIndex].x;
+    double py = particles.positions[particleIndex].y;
 
-    if (nw->Contains(px, py)) { nw->Insert(particle); }
-    else if (ne->Contains(px, py)) { ne->Insert(particle); }
-    else if (sw->Contains(px, py)) { sw->Insert(particle); }
-    else if (se->Contains(px, py)) { se->Insert(particle); }
+    if (nw->Contains(px, py)) { nw->Insert(particleIndex, particles); }
+    else if (ne->Contains(px, py)) { ne->Insert(particleIndex, particles); }
+    else if (sw->Contains(px, py)) { sw->Insert(particleIndex, particles); }
+    else if (se->Contains(px, py)) { se->Insert(particleIndex, particles); }
 }
 
 
 /**
-  * @brief  Get neighboring particles at specific location and radius
+  * @brief  Get neighboring particle indices at specific location and radius
   * @param  xMin
   * @param  yMin
   * @param  xMax
   * @param  yMax
-  * @param  results
+  * @param  results Vector of particle indices
   * @retval None
   */
-void QuadtreeNode::QueryRange(double xMin, double yMin, double xMax, double yMax, std::vector<Particle*>& results)
+void QuadtreeNode::QueryRange(double xMin, double yMin, double xMax, double yMax, std::vector<size_t>& results)
 {
     // If this node's region does not intersect the query box, skip entirely
     double nodeLeft = centerX - halfSize;
@@ -186,18 +200,12 @@ void QuadtreeNode::QueryRange(double xMin, double yMin, double xMax, double yMax
         return;
     }
 
-    // If leaf node and has a particle
+    // If leaf node, return all particle indices in bucket
+    // Note: We don't filter by exact position here for performance,
+    // the caller can do that if needed
     if (!nw && !ne && !sw && !se)
     {
-        if (particle)
-        {
-            const glm::dvec2& pos = particle->GetPosition();
-            if (pos.x >= xMin && pos.x <= xMax &&
-                pos.y >= yMin && pos.y <= yMax)
-            {
-                results.push_back(particle);
-            }
-        }
+        results.insert(results.end(), particleIndices.begin(), particleIndices.end());
         return;
     }
 
@@ -238,12 +246,13 @@ bool QuadtreeNode::Contains(double px, double py) const
 
 /**
   * @brief  Compute forces between particles that share a node and use approximations for further away nodes
-  * @param  particle
-  * @param  node
-  * @param  theta
-  * @retval bool
+  * @param  particleIndex Index of particle to compute force for
+  * @param  particles Reference to particle data (SoA)
+  * @param  node Quadtree node
+  * @param  theta Barnes-Hut approximation threshold
+  * @retval glm::dvec2 Force vector
   */
-glm::dvec2 ComputeForceBarnesHut(const Particle& particle, const QuadtreeNode* node, double theta)
+glm::dvec2 ComputeForceBarnesHut(size_t particleIndex, const ParticleData& particles, const QuadtreeNode* node, double theta)
 {
     glm::dvec2 force(0.0);
 
@@ -251,30 +260,33 @@ glm::dvec2 ComputeForceBarnesHut(const Particle& particle, const QuadtreeNode* n
     if (!node || node->totalMass <= 0.0)
         return force;
 
-    // If leaf node with one particle
+    // If leaf node with particles in bucket
     if (!node->nw && !node->ne && !node->sw && !node->se)
     {
-        // If it's the same particle, skip
-        if (node->particle == &particle)
-            return force;
+        // Compute direct force with each particle in the bucket
+        for (size_t idx : node->particleIndices)
+        {
+            // Skip if it's the same particle
+            if (idx == particleIndex)
+                continue;
 
-        // Otherwise, compute direct force with that single particle
-        glm::dvec2 dir = node->particle->GetPosition() - particle.GetPosition();
-        double dist2 = glm::dot(dir, dir);
-        if (dist2 < MIN_INTERACTION_DISTANCE * MIN_INTERACTION_DISTANCE)
-            dist2 = MIN_INTERACTION_DISTANCE * MIN_INTERACTION_DISTANCE;
+            glm::dvec2 dir = particles.positions[idx] - particles.positions[particleIndex];
+            double dist2 = glm::dot(dir, dir);
+            if (dist2 < MIN_INTERACTION_DISTANCE * MIN_INTERACTION_DISTANCE)
+                dist2 = MIN_INTERACTION_DISTANCE * MIN_INTERACTION_DISTANCE;
 
-        double softDist2 = dist2 + SOFTENING * SOFTENING;
-        double invDist = 1.0 / std::sqrt(softDist2);
+            double softDist2 = dist2 + SOFTENING * SOFTENING;
+            double invDist = 1.0 / std::sqrt(softDist2);
 
-        double f = GRAVITATIONAL_CONSTANT * particle.GetMass() * node->particle->GetMass() * invDist * invDist;
-        force += f * glm::normalize(dir);
+            double f = GRAVITATIONAL_CONSTANT * particles.masses[particleIndex] * particles.masses[idx] * invDist * invDist;
+            force += f * glm::normalize(dir);
+        }
         return force;
     }
 
     // Size of this region
-    double dx = node->centerOfMass.x - particle.GetPosition().x;
-    double dy = node->centerOfMass.y - particle.GetPosition().y;
+    double dx = node->centerOfMass.x - particles.positions[particleIndex].x;
+    double dy = node->centerOfMass.y - particles.positions[particleIndex].y;
     double dist = std::sqrt(dx * dx + dy * dy);
 
     // If region is far away, treat as single mass
@@ -287,7 +299,7 @@ glm::dvec2 ComputeForceBarnesHut(const Particle& particle, const QuadtreeNode* n
         double dist2 = dist * dist + SOFTENING * SOFTENING;
         double invDist = 1.0 / std::sqrt(dist2);
 
-        double f = GRAVITATIONAL_CONSTANT * particle.GetMass() * node->totalMass * invDist * invDist;
+        double f = GRAVITATIONAL_CONSTANT * particles.masses[particleIndex] * node->totalMass * invDist * invDist;
         glm::dvec2 dir(dx, dy);
         force += f * (dir / dist);
         return force;
@@ -295,10 +307,10 @@ glm::dvec2 ComputeForceBarnesHut(const Particle& particle, const QuadtreeNode* n
     else
     {
         // Otherwise, recurse into children
-        force += ComputeForceBarnesHut(particle, node->nw.get(), theta);
-        force += ComputeForceBarnesHut(particle, node->ne.get(), theta);
-        force += ComputeForceBarnesHut(particle, node->sw.get(), theta);
-        force += ComputeForceBarnesHut(particle, node->se.get(), theta);
+        force += ComputeForceBarnesHut(particleIndex, particles, node->nw.get(), theta);
+        force += ComputeForceBarnesHut(particleIndex, particles, node->ne.get(), theta);
+        force += ComputeForceBarnesHut(particleIndex, particles, node->sw.get(), theta);
+        force += ComputeForceBarnesHut(particleIndex, particles, node->se.get(), theta);
     }
     return force;
 }

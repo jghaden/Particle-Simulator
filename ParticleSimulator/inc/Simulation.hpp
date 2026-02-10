@@ -22,6 +22,7 @@
 
 #include "Engine.hpp"
 #include "Particle.hpp"
+#include "ParticleData.hpp"
 
 /* Exported types ----------------------------------------------------------- */
 
@@ -96,7 +97,7 @@ public:
     double GetTotalMass() const;
     glm::vec2 GetNewParticleVelocity() const;
     SimulationTemplate GetSimulationTemplate() const;
-    Particles* GetParticles() const;
+    ParticleData* GetParticleData() const;
     Engine* GetEngine() const;
 
     /* Setters ------------------------------------------------------------------ */
@@ -104,7 +105,7 @@ public:
     void SetMaxParticleCount(size_t count);
     void SetNewParticleMass(double mass);
     void SetNewParticleVelocity(glm::vec2 velocity);
-    void SetParticles(Particles* particles);
+    void SetParticleData(ParticleData* particleData);
     void SetParticleBrushSize(int size);
     void SetSimulationTemplate(SimulationTemplate simulationTemplate = SimulationTemplate::Empty);
     void SetTimeStep(double timeStep);
@@ -119,7 +120,7 @@ private:
     double             totalMass;
     glm::vec2          newParticleVelocity;
     SimulationTemplate simulationTemplate;
-    Particles*         particles;
+    ParticleData*      particleData;
     Engine*            engine;
 
     /* Private member functions ------------------------------------------------- */
