@@ -155,7 +155,7 @@ void Simulation::AddParticle(glm::dvec2 position)
     if (this->GetParticleCount() < this->GetMaxParticleCount())
     {
         this->particleData->AddParticle(
-            this->newParticleMass + 1.0,
+            this->newParticleMass,
             glm::dvec2(x, y),
             glm::dvec2(this->newParticleVelocity)
         );
@@ -190,7 +190,7 @@ void Simulation::AddParticles(glm::dvec2 position)
         if (this->GetParticleCount() < this->GetMaxParticleCount())
         {
             this->particleData->AddParticle(
-                this->newParticleMass + 1.0,
+                this->newParticleMass,
                 particlePos,
                 glm::dvec2(this->newParticleVelocity)
             );
