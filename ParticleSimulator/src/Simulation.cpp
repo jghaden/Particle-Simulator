@@ -19,6 +19,7 @@
 #include "Simulation.hpp"
 #include "Particle.hpp"
 #include "Quadtree.hpp"
+#include "VectorMath.hpp"
 
 /* Global variables --------------------------------------------------------- */
 /* Private typedef ---------------------------------------------------------- */
@@ -299,7 +300,7 @@ void Simulation::UpdateParticles()
     std::vector<size_t> neighborsReusable;
     neighborsReusable.reserve(32);
 
-    // Update velocities based on acceleration and handle collisions
+    // Handle bounding box constraints and collision detection
     for (size_t i = 0; i < numParticles; i++)
     {
         // Bounding box to keep particles in view
@@ -363,11 +364,45 @@ void Simulation::UpdateParticles()
                 }
             }
         }
-
-        particles.UpdateParticle(i, this->GetTimeStep());
-
-        this->totalMass = root.totalMass;
     }
+
+    // PHASE 2: Batch update velocities and positions using SIMD (after collisions resolved)
+    // Process particles in groups of 4 using AVX2 SIMD
+    static bool useSimd = HasAvx2Support();
+
+    if (useSimd && numParticles >= SIMD_WIDTH)
+    {
+        // Process full SIMD batches (4 particles at a time)
+        size_t simdCount = (numParticles / SIMD_WIDTH) * SIMD_WIDTH;
+
+        for (size_t i = 0; i < simdCount; i += SIMD_WIDTH)
+        {
+            UpdateParticlesSimd(particles, i, SIMD_WIDTH, this->GetTimeStep());
+
+            // Update ages and colors for these particles
+            for (size_t j = i; j < i + SIMD_WIDTH; ++j)
+            {
+                particles.ages[j] += this->GetTimeStep();
+                particles.UpdateColor(j);
+            }
+        }
+
+        // Process remaining particles with scalar code
+        for (size_t i = simdCount; i < numParticles; ++i)
+        {
+            particles.UpdateParticle(i, this->GetTimeStep());
+        }
+    }
+    else
+    {
+        // Fallback: scalar path for systems without AVX2
+        for (size_t i = 0; i < numParticles; ++i)
+        {
+            particles.UpdateParticle(i, this->GetTimeStep());
+        }
+    }
+
+    this->totalMass = root.totalMass;
 }
 
 

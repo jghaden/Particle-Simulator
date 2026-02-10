@@ -140,6 +140,7 @@ glfw3.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <PrecompiledHeader>Create</PrecompiledHeader>
       <PrecompiledHeaderFile>PCH.hpp</PrecompiledHeaderFile>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -188,6 +189,7 @@ glfw3.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     <ClInclude Include="inc\Quadtree.hpp" />
     <ClInclude Include="inc\Simulation.hpp" />
     <ClInclude Include="inc\Utility.hpp" />
+    <ClInclude Include="inc\VectorMath.hpp" />
     <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
