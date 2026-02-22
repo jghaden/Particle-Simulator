@@ -17,12 +17,10 @@
 #include "PCH.hpp"
 
 #include "ParticleData.hpp"
+#include "Particle.hpp"
 #include "Simulation.hpp"
 
 /* Global variables ----------------------------------------------------------*/
-
-// Color gradient for particle visualization (defined in Particle.cpp originally)
-extern COLOR_GRADIENT_T colorGradient;
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
@@ -191,28 +189,83 @@ void ParticleData::UpdateColor(size_t index)
 
 
 /**
-  * @brief  Calculate particle color from gradient based on speed
+  * @brief  Calculate color from gradient based on current color mode
   * @param  index
   * @retval glm::vec3
   */
 glm::vec3 ParticleData::CalculateColor(size_t index) const
 {
-    double speed = glm::length(velocities[index]);
-    float t = static_cast<float>(glm::clamp(speed / MAX_PARTICLE_COLOR_SPEED, 0.0, 1.0));
+    // Get the color value based on current mode
+    double value = 0.0;
+    ParticleColorMode mode = Particle::GetColorMode();
 
-    if (t <= colorGradient.front().first) return colorGradient.front().second;
-    if (t >= colorGradient.back().first) return colorGradient.back().second;
-
-    for (size_t i = 1; i < colorGradient.size(); ++i)
+    switch (mode)
     {
-        if (t < colorGradient[i].first)
+        case ParticleColorMode::Velocity:
         {
-            float localT = (t - colorGradient[i - 1].first) / (colorGradient[i].first - colorGradient[i - 1].first);
-            return glm::mix(colorGradient[i - 1].second, colorGradient[i].second, localT);
+            double speed = glm::length(velocities[index]);
+            value = speed / MAX_PARTICLE_COLOR_SPEED;
+            break;
+        }
+
+        case ParticleColorMode::Acceleration:
+        {
+            double accelMagnitude = glm::length(accelerations[index]);
+            constexpr double MAX_ACCEL = 100.0;
+            value = accelMagnitude / MAX_ACCEL;
+            break;
+        }
+
+        case ParticleColorMode::Mass:
+        {
+            constexpr double MIN_MASS = 1e7;
+            constexpr double MAX_MASS = 1e9;
+            value = glm::clamp((masses[index] - MIN_MASS) / (MAX_MASS - MIN_MASS), 0.0, 1.0);
+            break;
+        }
+
+        case ParticleColorMode::KineticEnergy:
+        {
+            double speed = glm::length(velocities[index]);
+            double kineticEnergy = 0.5 * masses[index] * speed * speed;
+            constexpr double MAX_KINETIC_ENERGY = 1e15;
+            value = kineticEnergy / MAX_KINETIC_ENERGY;
+            break;
+        }
+
+        case ParticleColorMode::CoMDistance:
+        {
+            double distance = glm::length(positions[index] - Particle::GetCenterOfMass());
+            constexpr double MAX_DISTANCE = 1.0; // Normalized to viewport size
+            value = distance / MAX_DISTANCE;
+            break;
+        }
+
+        case ParticleColorMode::Age:
+        {
+            constexpr double MAX_AGE = 1000.0;
+            value = ages[index] / MAX_AGE;
+            break;
         }
     }
 
-    return colorGradient.back().second;
+    // Use the static gradient from Particle class
+    float t = static_cast<float>(glm::clamp(value, 0.0, 1.0));
+    const COLOR_GRADIENT_T& currentGradient = Particle::GetCurrentGradient();
+
+    if (t <= currentGradient.front().first) return currentGradient.front().second;
+    if (t >= currentGradient.back().first) return currentGradient.back().second;
+
+    for (size_t i = 1; i < currentGradient.size(); ++i)
+    {
+        if (t < currentGradient[i].first)
+        {
+            float localT = (t - currentGradient[i - 1].first) / (currentGradient[i].first - currentGradient[i - 1].first);
+            return glm::mix(currentGradient[i - 1].second, currentGradient[i].second, localT);
+        }
+    }
+
+    return currentGradient.back().second;
 }
 
 

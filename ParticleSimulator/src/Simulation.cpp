@@ -275,6 +275,9 @@ void Simulation::UpdateParticles()
 
     root.ComputeMassDistribution(particles);
 
+    // Update center of mass for color visualization
+    Particle::SetCenterOfMass(root.centerOfMass);
+
     // Parallel force computation using OpenMP
     // Compute forces using Barnes-Hut, accumulate in each particle
     #pragma omp parallel for schedule(dynamic, 64) if(numParticles > 1000)

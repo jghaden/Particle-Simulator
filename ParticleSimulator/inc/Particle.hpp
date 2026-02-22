@@ -24,6 +24,16 @@
 
 typedef std::vector<std::pair<float, glm::vec3>> COLOR_GRADIENT_T;
 
+enum class ParticleColorMode
+{
+    Velocity,       // Color based on speed (magnitude of velocity)
+    Acceleration,   // Color based on acceleration magnitude
+    Mass,          // Color based on particle mass
+    KineticEnergy, // Color based on kinetic energy (0.5 * m * v^2)
+    CoMDistance,   // Color based on distance from center of mass
+    Age            // Color based on particle age
+};
+
 /* Exported constants ------------------------------------------------------- */
 /* Exported macro ----------------------------------------------------------- */
 /* Exported variables ------------------------------------------------------- */
@@ -44,6 +54,17 @@ public:
     void Update(double timeStep);
     void UpdateColor();
     glm::vec3 CalculateColor();
+
+    /* Static color mode management --------------------------------------------- */
+
+    static void SetColorMode(ParticleColorMode mode);
+    static ParticleColorMode GetColorMode();
+    static void SetColorGradient(const COLOR_GRADIENT_T& gradient);
+    static const COLOR_GRADIENT_T& GetCurrentGradient();
+    static COLOR_GRADIENT_T GetIRtoUVGradient();
+    static COLOR_GRADIENT_T GetClassicGradient();
+    static void SetCenterOfMass(glm::dvec2 com);
+    static glm::dvec2 GetCenterOfMass();
 
     /* Getters ------------------------------------------------------------------ */
 
@@ -76,7 +97,14 @@ private:
     int framesSinceColorUpdate = 0;
     static constexpr int COLOR_UPDATE_INTERVAL = 5;
 
+    // Static color mode settings
+    static ParticleColorMode currentColorMode;
+    static COLOR_GRADIENT_T currentGradient;
+    static glm::dvec2 centerOfMass;
+
     /* Private member functions ------------------------------------------------- */
+
+    double GetColorValue() const;
     /* Getters ------------------------------------------------------------------ */
     /* Setters ------------------------------------------------------------------ */
 };

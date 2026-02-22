@@ -632,7 +632,7 @@ void Engine::Run()
 
         // Clear screen
         glClear(GL_COLOR_BUFFER_BIT);
-        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
         // Render particles
         glDisable(GL_BLEND);
@@ -661,17 +661,23 @@ void Engine::Run()
             sprintf_s(textBuffer, "%ld", (int)(1.0f / fElapsedTime));
             RenderText(textBuffer, this->GetWindowWidth() - 55.0f, 30, 18.0f, FONT_T::RobotoLight, glm::vec3(1.0f, 1.0, 0.0f));
 
-            RenderText("Mass:", 10.0f, this->GetWindowHeight() - 70.0f, 18.0f, FONT_T::RobotoBold, glm::vec3(0.61f, 0.85f, 0.9f));
+            RenderText("Mass:", 10.0f, this->GetWindowHeight() - 95.0f, 18.0f, FONT_T::RobotoBold, glm::vec3(0.61f, 0.85f, 0.9f));
             sprintf_s(textBuffer, "%.0e kg", this->GetSimulation()->GetNewParticleMass());
+            RenderText(textBuffer, 95.0f, this->GetWindowHeight() - 95.0f, 18.0f, FONT_T::RobotoLight, glm::vec3(0.61f, 0.85f, 0.9f));
+
+            RenderText("Velocity:", 10.0f, this->GetWindowHeight() - 70.0f, 18.0f, FONT_T::RobotoBold, glm::vec3(0.61f, 0.85f, 0.9f));
+            sprintf_s(textBuffer, "(%.0lf, %.0lf) m/s", this->GetSimulation()->GetNewParticleVelocity().x, this->GetSimulation()->GetNewParticleVelocity().y);
             RenderText(textBuffer, 95.0f, this->GetWindowHeight() - 70.0f, 18.0f, FONT_T::RobotoLight, glm::vec3(0.61f, 0.85f, 0.9f));
 
-            RenderText("Velocity:", 10.0f, this->GetWindowHeight() - 50.0f, 18.0f, FONT_T::RobotoBold, glm::vec3(0.61f, 0.85f, 0.9f));
-            sprintf_s(textBuffer, "(%.0lf, %.0lf) m/s", this->GetSimulation()->GetNewParticleVelocity().x, this->GetSimulation()->GetNewParticleVelocity().y);
-            RenderText(textBuffer, 95.0f, this->GetWindowHeight() - 50.0f, 18.0f, FONT_T::RobotoLight, glm::vec3(0.61f, 0.85f, 0.9f));
-
-            RenderText("Brush size:", 10.0f, this->GetWindowHeight() - 30.0f, 18.0f, FONT_T::RobotoBold, glm::vec3(0.61f, 0.85f, 0.9f));
+            RenderText("Brush size:", 10.0f, this->GetWindowHeight() - 45.0f, 18.0f, FONT_T::RobotoBold, glm::vec3(0.61f, 0.85f, 0.9f));
             sprintf_s(textBuffer, "%d", this->GetSimulation()->GetParticleBrushSize());
-            RenderText(textBuffer, 95.0f, this->GetWindowHeight() - 30.0f, 18.0f, FONT_T::RobotoLight, glm::vec3(0.61f, 0.85f, 0.9f));
+            RenderText(textBuffer, 95.0f, this->GetWindowHeight() - 45.0f, 18.0f, FONT_T::RobotoLight, glm::vec3(0.61f, 0.85f, 0.9f));
+
+            // Color mode display
+            RenderText("Color mode:", 10.0f, this->GetWindowHeight() - 20.0f, 18.0f, FONT_T::RobotoBold, glm::vec3(0.98f, 0.70f, 0.25f));
+            const char* colorModeNames[] = {"Velocity", "Acceleration", "Mass", "Kinetic Energy", "CoM Distance", "Age"};
+            int currentModeIndex = static_cast<int>(Particle::GetColorMode());
+            RenderText(colorModeNames[currentModeIndex], 110.0f, this->GetWindowHeight() - 20.0f, 18.0f, FONT_T::RobotoLight, glm::vec3(0.98f, 0.70f, 0.25f));
 
             if (isSimulationPaused)
             {
@@ -975,6 +981,28 @@ void Engine::KeyboardCallback(GLFWwindow* window, int key, int scancode, int act
                 case GLFW_KEY_RIGHT_BRACKET: e->GetSimulation()->SetParticleBrushSize(e->GetSimulation()->GetParticleBrushSize() + ((isKeyLeftCtrlPressed) ? 10 : 1)); break;
 
                 case GLFW_KEY_F1: isShowingUI = !isShowingUI; break;
+
+                // Color visualization mode switching
+                case GLFW_KEY_C:
+                {
+                    // Cycle through color modes
+                    int currentMode = static_cast<int>(Particle::GetColorMode());
+                    currentMode = (currentMode + 1) % 6; // 6 total modes
+                    Particle::SetColorMode(static_cast<ParticleColorMode>(currentMode));
+                    break;
+                }
+
+                // Toggle between IR-UV and classic gradient
+                case GLFW_KEY_T:
+                {
+                    static bool usingIRUV = true;
+                    if (usingIRUV)
+                        Particle::SetColorGradient(Particle::GetClassicGradient());
+                    else
+                        Particle::SetColorGradient(Particle::GetIRtoUVGradient());
+                    usingIRUV = !usingIRUV;
+                    break;
+                }
 
                 case GLFW_KEY_ESCAPE: Exit(0);  break;
                 case GLFW_KEY_LEFT_CONTROL: isKeyLeftCtrlPressed = true; break;
