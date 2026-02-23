@@ -55,17 +55,20 @@ constexpr double COLLISION_DAMPING        = 0.0;            // Collision respons
 constexpr double DAMPING_FACTOR           = 1.0;            // Velocity damping factor
 constexpr double MATH_PI_CONSTANT         = 3.1415926536;   // Mathmatical constant - pi
 constexpr double MAX_PARTICLE_COLOR_SPEED = 10.0;           // Upper bounds for speed to determine how to color a particle
-constexpr double MIN_INTERACTION_DISTANCE = 2.0;            // Minimum distance to prevent collapse
+constexpr double MIN_INTERACTION_DISTANCE = 0.001;          // Minimum distance to prevent collapse
 constexpr double GRAVITATIONAL_CONSTANT   = 6.6743e-11;     // Physics constant - G
 constexpr double PARTICLE_RADIUS          = 0.0055;         // Radius of each particle for collision detection
 constexpr double REPULSION_FACTOR         = 1.00;           // Basic repulsion force to apply when particles collide
-constexpr double SOFTENING                = 1.0;            // Softening factor to prevent extreme forces
+constexpr double SOFTENING                = 0.01;           // Softening factor to prevent extreme forces
 constexpr double TIME_STEP                = 1e-3;           // Time in seconds to step through the simulation
 
 /* Exported macro ----------------------------------------------------------- */
 /* Exported variables ------------------------------------------------------- */
 /* Exported functions ------------------------------------------------------- */
 /* Forward declarations ----------------------------------------------------- */
+
+struct QuadtreeNodePool;
+
 /* Class definition --------------------------------------------------------- */
 
 class Simulation
@@ -75,6 +78,7 @@ public:
     /* Public member functions -------------------------------------------------- */
 
     Simulation(Engine* engine, SimulationTemplate simulationTemplate = SimulationTemplate::Empty);
+    ~Simulation();
 
     void Init();
     void InitTemplateParticles();
@@ -122,6 +126,7 @@ private:
     SimulationTemplate simulationTemplate;
     ParticleData*      particleData;
     Engine*            engine;
+    QuadtreeNodePool*  nodePool;
 
     /* Private member functions ------------------------------------------------- */
     /* Getters ------------------------------------------------------------------ */

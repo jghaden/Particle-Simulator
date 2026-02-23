@@ -35,20 +35,61 @@
 
 
 /**
-  * @brief  QuadtreeNode constructor
-  * @param  centerX
-  * @param  centerY
-  * @param  halfSize
+  * @brief  Initialize a QuadtreeNode (called by pool allocator each frame)
+  * @param  cx    Center x coordinate
+  * @param  cy    Center y coordinate
+  * @param  hs    Half-size of the node
   * @retval None
   */
-QuadtreeNode::QuadtreeNode(double centerX, double centerY, double halfSize)
+void QuadtreeNode::Init(double cx, double cy, double hs)
 {
-    this->centerOfMass = glm::dvec2(0.0);
-    this->centerX      = centerX;
-    this->centerY      = centerY;
-    this->halfSize     = halfSize;
-    this->totalMass    = 0.0;
-    this->particleIndices.reserve(BUCKET_CAPACITY);
+    this->centerOfMass  = glm::dvec2(0.0);
+    this->centerX       = cx;
+    this->centerY       = cy;
+    this->halfSize      = hs;
+    this->totalMass     = 0.0;
+    this->particleCount = 0;
+    this->nw = nullptr;
+    this->ne = nullptr;
+    this->sw = nullptr;
+    this->se = nullptr;
+}
+
+
+/**
+  * @brief  QuadtreeNodePool constructor — pre-allocates all nodes once
+  * @retval None
+  */
+QuadtreeNodePool::QuadtreeNodePool()
+{
+    nodes.resize(POOL_MAX_NODES);
+    nextIndex = 0;
+}
+
+
+/**
+  * @brief  Allocate and initialize one node from the pool
+  * @param  cx    Center x
+  * @param  cy    Center y
+  * @param  hs    Half-size
+  * @retval Pointer to initialized node
+  */
+QuadtreeNode* QuadtreeNodePool::Allocate(double cx, double cy, double hs)
+{
+    assert(nextIndex < POOL_MAX_NODES && "QuadtreeNodePool exhausted — increase POOL_MAX_NODES");
+    QuadtreeNode* node = &nodes[nextIndex++];
+    node->Init(cx, cy, hs);
+    return node;
+}
+
+
+/**
+  * @brief  Reset the pool for reuse next frame (no destructors, O(1))
+  * @retval None
+  */
+void QuadtreeNodePool::Reset()
+{
+    nextIndex = 0;
 }
 
 
@@ -62,13 +103,14 @@ void QuadtreeNode::ComputeMassDistribution(const ParticleData& particles)
     // Leaf node with particles in bucket
     if (!nw && !ne && !sw && !se)
     {
-        if (!particleIndices.empty())
+        if (particleCount > 0)
         {
             double massSum = 0.0;
             glm::dvec2 weightedPosition(0.0);
 
-            for (size_t idx : particleIndices)
+            for (size_t k = 0; k < particleCount; ++k)
             {
+                size_t idx = particleIndices[k];
                 double mass = particles.masses[idx];
                 massSum += mass;
                 weightedPosition += particles.positions[idx] * mass;
@@ -120,59 +162,55 @@ void QuadtreeNode::ComputeMassDistribution(const ParticleData& particles)
 }
 
 
-// Insert a particle into the quadtree
 /**
   * @brief  Insert a particle into the quadtree
   * @param  particleIndex Index of particle in ParticleData
-  * @param  particles Reference to particle data (SoA)
+  * @param  particles     Reference to particle data (SoA)
+  * @param  pool          Node pool for allocating child nodes
   * @retval None
   */
-void QuadtreeNode::Insert(size_t particleIndex, const ParticleData& particles)
+void QuadtreeNode::Insert(size_t particleIndex, const ParticleData& particles, QuadtreeNodePool& pool)
 {
-    double px = particles.positions[particleIndex].x;
-    double py = particles.positions[particleIndex].y;
-
     // If this is a leaf node and bucket has capacity, add to bucket
     if (!nw && !ne && !sw && !se)
     {
-        if (particleIndices.size() < BUCKET_CAPACITY)
+        if (particleCount < BUCKET_CAPACITY)
         {
-            particleIndices.push_back(particleIndex);
+            particleIndices[particleCount++] = particleIndex;
             return;
         }
 
-        // Bucket is full, must subdivide
-        Subdivide();
+        // Bucket is full — subdivide and redistribute existing particles
+        Subdivide(pool);
 
-        // Re-insert all existing particles in the bucket
-        for (size_t idx : particleIndices)
+        for (size_t k = 0; k < particleCount; ++k)
         {
-            InsertIntoChild(idx, particles);
+            InsertIntoChild(particleIndices[k], particles, pool);
         }
-        particleIndices.clear();
+        particleCount = 0;
     }
 
     // Insert the new particle into appropriate child
-    InsertIntoChild(particleIndex, particles);
+    InsertIntoChild(particleIndex, particles, pool);
 }
 
 
-// Insert a particle into a child node
 /**
   * @brief  Insert a particle into a child node
   * @param  particleIndex Index of particle in ParticleData
-  * @param  particles Reference to particle data (SoA)
+  * @param  particles     Reference to particle data (SoA)
+  * @param  pool          Node pool for allocating child nodes
   * @retval None
   */
-void QuadtreeNode::InsertIntoChild(size_t particleIndex, const ParticleData& particles)
+void QuadtreeNode::InsertIntoChild(size_t particleIndex, const ParticleData& particles, QuadtreeNodePool& pool)
 {
     double px = particles.positions[particleIndex].x;
     double py = particles.positions[particleIndex].y;
 
-    if (nw->Contains(px, py)) { nw->Insert(particleIndex, particles); }
-    else if (ne->Contains(px, py)) { ne->Insert(particleIndex, particles); }
-    else if (sw->Contains(px, py)) { sw->Insert(particleIndex, particles); }
-    else if (se->Contains(px, py)) { se->Insert(particleIndex, particles); }
+    if      (nw->Contains(px, py)) { nw->Insert(particleIndex, particles, pool); }
+    else if (ne->Contains(px, py)) { ne->Insert(particleIndex, particles, pool); }
+    else if (sw->Contains(px, py)) { sw->Insert(particleIndex, particles, pool); }
+    else if (se->Contains(px, py)) { se->Insert(particleIndex, particles, pool); }
 }
 
 
@@ -188,10 +226,10 @@ void QuadtreeNode::InsertIntoChild(size_t particleIndex, const ParticleData& par
 void QuadtreeNode::QueryRange(double xMin, double yMin, double xMax, double yMax, std::vector<size_t>& results)
 {
     // If this node's region does not intersect the query box, skip entirely
-    double nodeLeft = centerX - halfSize;
-    double nodeRight = centerX + halfSize;
+    double nodeLeft   = centerX - halfSize;
+    double nodeRight  = centerX + halfSize;
     double nodeBottom = centerY - halfSize;
-    double nodeTop = centerY + halfSize;
+    double nodeTop    = centerY + halfSize;
 
     // No overlap if the boxes are strictly outside each other
     if (xMax < nodeLeft || xMin > nodeRight ||
@@ -201,11 +239,12 @@ void QuadtreeNode::QueryRange(double xMin, double yMin, double xMax, double yMax
     }
 
     // If leaf node, return all particle indices in bucket
-    // Note: We don't filter by exact position here for performance,
-    // the caller can do that if needed
     if (!nw && !ne && !sw && !se)
     {
-        results.insert(results.end(), particleIndices.begin(), particleIndices.end());
+        for (size_t k = 0; k < particleCount; ++k)
+        {
+            results.push_back(particleIndices[k]);
+        }
         return;
     }
 
@@ -216,18 +255,19 @@ void QuadtreeNode::QueryRange(double xMin, double yMin, double xMax, double yMax
     if (se) se->QueryRange(xMin, yMin, xMax, yMax, results);
 }
 
+
 /**
-  * @brief  Subdivide this node into four children
-  * @param  None
+  * @brief  Subdivide this node into four children (allocated from pool)
+  * @param  pool  Node pool
   * @retval None
   */
-void QuadtreeNode::Subdivide()
+void QuadtreeNode::Subdivide(QuadtreeNodePool& pool)
 {
     double quarterSize = halfSize / 2.0;
-    nw = std::make_unique<QuadtreeNode>(centerX - quarterSize, centerY + quarterSize, quarterSize);
-    ne = std::make_unique<QuadtreeNode>(centerX + quarterSize, centerY + quarterSize, quarterSize);
-    sw = std::make_unique<QuadtreeNode>(centerX - quarterSize, centerY - quarterSize, quarterSize);
-    se = std::make_unique<QuadtreeNode>(centerX + quarterSize, centerY - quarterSize, quarterSize);
+    nw = pool.Allocate(centerX - quarterSize, centerY + quarterSize, quarterSize);
+    ne = pool.Allocate(centerX + quarterSize, centerY + quarterSize, quarterSize);
+    sw = pool.Allocate(centerX - quarterSize, centerY - quarterSize, quarterSize);
+    se = pool.Allocate(centerX + quarterSize, centerY - quarterSize, quarterSize);
 }
 
 
@@ -247,10 +287,10 @@ bool QuadtreeNode::Contains(double px, double py) const
 /**
   * @brief  Compute forces between particles that share a node and use approximations for further away nodes
   * @param  particleIndex Index of particle to compute force for
-  * @param  particles Reference to particle data (SoA)
-  * @param  node Quadtree node
-  * @param  theta Barnes-Hut approximation threshold
-  * @retval glm::dvec2 Force vector
+  * @param  particles     Reference to particle data (SoA)
+  * @param  node          Quadtree node
+  * @param  theta         Barnes-Hut approximation threshold
+  * @retval glm::dvec2    Force vector
   */
 glm::dvec2 ComputeForceBarnesHut(size_t particleIndex, const ParticleData& particles, const QuadtreeNode* node, double theta)
 {
@@ -264,8 +304,10 @@ glm::dvec2 ComputeForceBarnesHut(size_t particleIndex, const ParticleData& parti
     if (!node->nw && !node->ne && !node->sw && !node->se)
     {
         // Compute direct force with each particle in the bucket
-        for (size_t idx : node->particleIndices)
+        for (size_t k = 0; k < node->particleCount; ++k)
         {
+            size_t idx = node->particleIndices[k];
+
             // Skip if it's the same particle
             if (idx == particleIndex)
                 continue;
@@ -300,17 +342,17 @@ glm::dvec2 ComputeForceBarnesHut(size_t particleIndex, const ParticleData& parti
         double invDist = 1.0 / std::sqrt(dist2);
 
         double f = GRAVITATIONAL_CONSTANT * particles.masses[particleIndex] * node->totalMass * invDist * invDist;
-        glm::dvec2 dir(dx, dy);
-        force += f * (dir / dist);
+        glm::dvec2 dir = glm::normalize(glm::dvec2(dx, dy));
+        force += f * dir;
         return force;
     }
     else
     {
         // Otherwise, recurse into children
-        force += ComputeForceBarnesHut(particleIndex, particles, node->nw.get(), theta);
-        force += ComputeForceBarnesHut(particleIndex, particles, node->ne.get(), theta);
-        force += ComputeForceBarnesHut(particleIndex, particles, node->sw.get(), theta);
-        force += ComputeForceBarnesHut(particleIndex, particles, node->se.get(), theta);
+        force += ComputeForceBarnesHut(particleIndex, particles, node->nw, theta);
+        force += ComputeForceBarnesHut(particleIndex, particles, node->ne, theta);
+        force += ComputeForceBarnesHut(particleIndex, particles, node->sw, theta);
+        force += ComputeForceBarnesHut(particleIndex, particles, node->se, theta);
     }
     return force;
 }

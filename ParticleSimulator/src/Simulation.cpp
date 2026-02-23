@@ -56,6 +56,17 @@ Simulation::Simulation(Engine* engine, SimulationTemplate simulationTemplate)
     this->simulationTime      = 0.0;
     this->timeStep            = TIME_STEP;
     this->totalMass           = 0.0;
+    this->nodePool             = new QuadtreeNodePool();
+}
+
+
+/**
+  * @brief  Simulation destructor
+  * @retval None
+  */
+Simulation::~Simulation()
+{
+    delete this->nodePool;
 }
 
 
@@ -266,17 +277,18 @@ void Simulation::UpdateParticles()
     double centerY = 0.0;
     double halfSize = 1.0;
 
-    // Build quadtree
-    QuadtreeNode root(centerX, centerY, halfSize + 1e-3);
+    // Reset pool and build quadtree (O(1) reset, no heap alloc per node)
+    nodePool->Reset();
+    QuadtreeNode* root = nodePool->Allocate(centerX, centerY, halfSize + 1e-3);
     for (size_t i = 0; i < numParticles; ++i)
     {
-        root.Insert(i, particles);
+        root->Insert(i, particles, *nodePool);
     }
 
-    root.ComputeMassDistribution(particles);
+    root->ComputeMassDistribution(particles);
 
     // Update center of mass for color visualization
-    Particle::SetCenterOfMass(root.centerOfMass);
+    Particle::SetCenterOfMass(root->centerOfMass);
 
     // Parallel force computation using OpenMP
     // Compute forces using Barnes-Hut, accumulate in each particle
@@ -286,7 +298,7 @@ void Simulation::UpdateParticles()
         // Reset acceleration for this time step
         particles.accelerations[i] = glm::dvec2(0.0);
 
-        glm::dvec2 bhForce = ComputeForceBarnesHut(i, particles, &root, THETA);
+        glm::dvec2 bhForce = ComputeForceBarnesHut(i, particles, root, THETA);
         // a = F / m
         particles.accelerations[i] = bhForce / particles.masses[i];
     }
@@ -326,7 +338,7 @@ void Simulation::UpdateParticles()
         double yMax = posI.y + range;
 
         neighborsReusable.clear();
-        root.QueryRange(xMin, yMin, xMax, yMax, neighborsReusable);
+        root->QueryRange(xMin, yMin, xMax, yMax, neighborsReusable);
 
         // Check collisions only with these neighbors
         for (size_t j : neighborsReusable)
@@ -397,7 +409,7 @@ void Simulation::UpdateParticles()
         }
     }
 
-    this->totalMass = root.totalMass;
+    this->totalMass = root->totalMass;
 }
 
 
