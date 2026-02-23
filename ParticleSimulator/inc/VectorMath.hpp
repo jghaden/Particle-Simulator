@@ -2,14 +2,21 @@
   ******************************************************************************
   * @file    VectorMath.hpp
   * @author  Josh Haden
-  * @version V0.2.0
+  * @version V0.3.0
   * @date    09 FEB 2026
   * @brief   SIMD vectorized math operations for particle physics
   ******************************************************************************
   * @attention
   *
-  * This file provides AVX2-optimized vector operations for processing
-  * multiple particles simultaneously. Requires CPU with AVX2 support.
+  * glm::dvec2 stores x and y contiguously (16 bytes per element).
+  * Two consecutive dvec2 values occupy exactly 32 bytes — one AVX2 register.
+  * This allows direct _mm256_loadu_pd loads with no gather or temp arrays.
+  *
+  * Layout in memory:
+  *   positions: [x0, y0, x1, y1, x2, y2, x3, y3, ...]
+  *
+  * One _mm256_loadu_pd at &positions[i].x loads [xi, yi, x(i+1), y(i+1)].
+  * Two such loads per operation handle 4 particles per SIMD iteration.
   *
   ******************************************************************************
   */
@@ -29,7 +36,7 @@
 /* Exported types ----------------------------------------------------------- */
 /* Exported constants ------------------------------------------------------- */
 
-// SIMD lane width for AVX2 (processes 4 doubles at once)
+// Processes 4 particles per iteration (2 particles per 256-bit AVX2 register)
 constexpr size_t SIMD_WIDTH = 4;
 
 /* Exported macro ----------------------------------------------------------- */
@@ -39,131 +46,64 @@ constexpr size_t SIMD_WIDTH = 4;
 /**
  * @brief Update particle velocities and positions using AVX2 SIMD
  * @param particleData Reference to particle data (SoA)
- * @param startIdx Starting particle index
- * @param count Number of particles to process (should be multiple of 4)
- * @param timeStep Simulation time step
+ * @param startIdx     Starting particle index (must leave room for SIMD_WIDTH particles)
+ * @param count        Number of particles to process (must be a multiple of SIMD_WIDTH)
+ * @param timeStep     Simulation time step
  * @retval None
  *
- * This function processes 4 particles at once using AVX2 instructions.
- * It performs: velocity += acceleration * dt, position += velocity * dt
+ * Processes 4 particles per loop iteration using two 256-bit AVX2 loads.
+ * Each _mm256_loadu_pd reads two consecutive dvec2 values (x_i, y_i, x_{i+1}, y_{i+1})
+ * directly from the vector — no temporary arrays or gather operations.
+ *
+ * Per iteration:
+ *   vel += acc * dt    (fmadd x2)
+ *   vel *= damping     (mul   x2)
+ *   pos += vel * dt    (fmadd x2)
+ *   acc  = 0           (store x2)
  */
 inline void UpdateParticlesSimd(ParticleData& particleData, size_t startIdx, size_t count, double timeStep)
 {
-    // Load constants into SIMD registers
-    __m256d dt = _mm256_set1_pd(timeStep);
-    __m256d dampingFactor = _mm256_set1_pd(DAMPING_FACTOR);
+    const __m256d dt   = _mm256_set1_pd(timeStep);
+    const __m256d damp = _mm256_set1_pd(DAMPING_FACTOR);
+    const __m256d zero = _mm256_setzero_pd();
 
-    // Process 4 particles at a time (AVX2 = 256 bits / 64 bits per double = 4 doubles)
     for (size_t i = startIdx; i < startIdx + count; i += SIMD_WIDTH)
     {
-        // Load velocities (x components for 4 particles)
-        __m256d velX = _mm256_loadu_pd(&particleData.velocities[i].x);
-        // Load accelerations (x components for 4 particles)
-        // Note: We need to gather x components which are strided by sizeof(glm::dvec2)
+        // Load [vx_i, vy_i, vx_{i+1}, vy_{i+1}] and [vx_{i+2}, vy_{i+2}, vx_{i+3}, vy_{i+3}]
+        __m256d vel01 = _mm256_loadu_pd(&particleData.velocities[i + 0].x);
+        __m256d vel23 = _mm256_loadu_pd(&particleData.velocities[i + 2].x);
 
-        // For simplicity with glm::dvec2 arrays, we'll process x and y separately
-        // Load 4 velocity.x values
-        double velX_array[4] = {
-            particleData.velocities[i + 0].x,
-            particleData.velocities[i + 1].x,
-            particleData.velocities[i + 2].x,
-            particleData.velocities[i + 3].x
-        };
-        velX = _mm256_loadu_pd(velX_array);
+        // Load accelerations for 4 particles
+        __m256d acc01 = _mm256_loadu_pd(&particleData.accelerations[i + 0].x);
+        __m256d acc23 = _mm256_loadu_pd(&particleData.accelerations[i + 2].x);
 
-        // Load 4 acceleration.x values
-        double accX_array[4] = {
-            particleData.accelerations[i + 0].x,
-            particleData.accelerations[i + 1].x,
-            particleData.accelerations[i + 2].x,
-            particleData.accelerations[i + 3].x
-        };
-        __m256d accX = _mm256_loadu_pd(accX_array);
+        // vel += acc * dt
+        vel01 = _mm256_fmadd_pd(acc01, dt, vel01);
+        vel23 = _mm256_fmadd_pd(acc23, dt, vel23);
 
-        // velocity.x += acceleration.x * dt
-        velX = _mm256_fmadd_pd(accX, dt, velX);
+        // vel *= damping
+        vel01 = _mm256_mul_pd(vel01, damp);
+        vel23 = _mm256_mul_pd(vel23, damp);
 
-        // velocity.x *= damping
-        velX = _mm256_mul_pd(velX, dampingFactor);
+        // Store updated velocities
+        _mm256_storeu_pd(&particleData.velocities[i + 0].x, vel01);
+        _mm256_storeu_pd(&particleData.velocities[i + 2].x, vel23);
 
-        // Store updated velocities.x
-        double newVelX[4];
-        _mm256_storeu_pd(newVelX, velX);
-        for (int j = 0; j < 4; ++j)
-        {
-            particleData.velocities[i + j].x = newVelX[j];
-        }
+        // Load positions for 4 particles
+        __m256d pos01 = _mm256_loadu_pd(&particleData.positions[i + 0].x);
+        __m256d pos23 = _mm256_loadu_pd(&particleData.positions[i + 2].x);
 
-        // Repeat for Y component
-        double velY_array[4] = {
-            particleData.velocities[i + 0].y,
-            particleData.velocities[i + 1].y,
-            particleData.velocities[i + 2].y,
-            particleData.velocities[i + 3].y
-        };
-        __m256d velY = _mm256_loadu_pd(velY_array);
+        // pos += vel * dt
+        pos01 = _mm256_fmadd_pd(vel01, dt, pos01);
+        pos23 = _mm256_fmadd_pd(vel23, dt, pos23);
 
-        double accY_array[4] = {
-            particleData.accelerations[i + 0].y,
-            particleData.accelerations[i + 1].y,
-            particleData.accelerations[i + 2].y,
-            particleData.accelerations[i + 3].y
-        };
-        __m256d accY = _mm256_loadu_pd(accY_array);
-
-        velY = _mm256_fmadd_pd(accY, dt, velY);
-        velY = _mm256_mul_pd(velY, dampingFactor);
-
-        double newVelY[4];
-        _mm256_storeu_pd(newVelY, velY);
-        for (int j = 0; j < 4; ++j)
-        {
-            particleData.velocities[i + j].y = newVelY[j];
-        }
-
-        // Update positions: position += velocity * dt
-        double posX_array[4] = {
-            particleData.positions[i + 0].x,
-            particleData.positions[i + 1].x,
-            particleData.positions[i + 2].x,
-            particleData.positions[i + 3].x
-        };
-        __m256d posX = _mm256_loadu_pd(posX_array);
-
-        velX = _mm256_loadu_pd(newVelX);  // Use updated velocity
-        posX = _mm256_fmadd_pd(velX, dt, posX);
-
-        double newPosX[4];
-        _mm256_storeu_pd(newPosX, posX);
-        for (int j = 0; j < 4; ++j)
-        {
-            particleData.positions[i + j].x = newPosX[j];
-        }
-
-        // Y positions
-        double posY_array[4] = {
-            particleData.positions[i + 0].y,
-            particleData.positions[i + 1].y,
-            particleData.positions[i + 2].y,
-            particleData.positions[i + 3].y
-        };
-        __m256d posY = _mm256_loadu_pd(posY_array);
-
-        velY = _mm256_loadu_pd(newVelY);  // Use updated velocity
-        posY = _mm256_fmadd_pd(velY, dt, posY);
-
-        double newPosY[4];
-        _mm256_storeu_pd(newPosY, posY);
-        for (int j = 0; j < 4; ++j)
-        {
-            particleData.positions[i + j].y = newPosY[j];
-        }
+        // Store updated positions
+        _mm256_storeu_pd(&particleData.positions[i + 0].x, pos01);
+        _mm256_storeu_pd(&particleData.positions[i + 2].x, pos23);
 
         // Reset accelerations to zero
-        for (int j = 0; j < 4; ++j)
-        {
-            particleData.accelerations[i + j] = glm::dvec2(0.0);
-        }
+        _mm256_storeu_pd(&particleData.accelerations[i + 0].x, zero);
+        _mm256_storeu_pd(&particleData.accelerations[i + 2].x, zero);
     }
 }
 
